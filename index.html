@@ -1322,8 +1322,8 @@ h1,h2,.title,.mainTitle,.menuTitle,.pageTitle,
           </div>
           <div id="onlineWins" class="tabPanel">
             <div class="leaderBox">
-              <h3>Online Wins</h3>
-              <div class="leaderRow">Coming soon: Create Arena / Join Fight records.</div>
+              <h3>Online Wins Top 20</h3>
+              <div id="onlineRows"></div>
             </div>
           </div>
           <div id="cardsTab" class="tabPanel">
@@ -2105,18 +2105,55 @@ function cleanInitialsLive(value){
 function cleanInitials(value){
   return cleanInitialsLive(value).padEnd(3,'A');
 }
+
+function getOnlineRecords(){
+  try{return JSON.parse(localStorage.getItem('ABA_online_records') || '[]')}
+  catch(e){return []}
+}
+function setOnlineRecords(records){
+  localStorage.setItem('ABA_online_records', JSON.stringify(records.slice(0,20)));
+}
+function addOnlineWin(name){
+  const nm = cleanInitials(name || localStorage.getItem('ABA_last_initials') || 'AAA');
+  let records = getOnlineRecords();
+  const found = records.find(r=>cleanInitials(r.name) === nm);
+  if(found){
+    found.wins = (found.wins || 0) + 1;
+    found.date = Date.now();
+  }else{
+    records.push({name:nm,wins:1,date:Date.now()});
+  }
+  records.sort((a,b)=>b.wins-a.wins);
+  setOnlineRecords(records);
+}
+
 function buildLeader(){
   const d = document.getElementById('darkRows');
-  if(!d) return;
-  let records = getDarkRecords().sort((a,b)=>b.wins-a.wins).slice(0,10);
-  if(records.length === 0){
-    d.innerHTML = '<div class="leaderRow">NO RECORDS YET</div><div class="leaderRow">Enter the Dark Tournament and survive.</div>';
-    return;
+  if(d){
+    let records = getDarkRecords().sort((a,b)=>b.wins-a.wins).slice(0,10);
+    if(records.length === 0){
+      d.innerHTML = '<div class="leaderRow">NO RECORDS YET</div><div class="leaderRow">Enter the Dark Tournament and survive.</div>';
+    }else{
+      d.innerHTML = records.map((r,i)=>{
+        const fighter = r.fighter || 'UNKNOWN';
+        return '<div class="leaderRow"><span style="color:#ffd43d">'+(i+1)+'.</span> '+cleanInitials(r.name)+
+        '<span style="float:right">'+fighter+' '+r.wins+' WIN'+(r.wins===1?'':'S')+'</span></div>';
+      }).join('');
+    }
   }
-  d.innerHTML = records.map((r,i)=>
-    '<div class="leaderRow"><span style="color:#ffd43d">'+(i+1)+'.</span> '+cleanInitials(r.name)+
-    '<span style="float:right">'+r.wins+' WIN'+(r.wins===1?'':'S')+'</span></div>'
-  ).join('');
+
+  const o = document.getElementById('onlineRows');
+  if(o){
+    let online = getOnlineRecords().sort((a,b)=>b.wins-a.wins).slice(0,20);
+    if(online.length === 0){
+      o.innerHTML = '<div class="leaderRow">NO ONLINE WINS YET</div><div class="leaderRow">Win an online VS match to appear here.</div>';
+    }else{
+      o.innerHTML = online.map((r,i)=>
+        '<div class="leaderRow"><span style="color:#ffd43d">'+(i+1)+'.</span> '+cleanInitials(r.name)+
+        '<span style="float:right">'+r.wins+' WIN'+(r.wins===1?'':'S')+'</span></div>'
+      ).join('');
+    }
+  }
 }
 function showLeader(){
   buildLeader();
@@ -2548,7 +2585,9 @@ function saveDarkRecord(skip=false){
   if(!skip){
     localStorage.setItem('ABA_last_initials', cleanInitialsLive(raw));
     let records = getDarkRecords();
-    records.push({name:nm,wins:darkRunWins,date:Date.now()});
+    const fighterKey = (P1 && P1.key) ? P1.key : (selected || 'Unknown');
+    const fighterName = fighters[fighterKey] ? fighters[fighterKey].name : fighterKey;
+    records.push({name:nm,wins:darkRunWins,fighter:fighterName,date:Date.now()});
     records.sort((a,b)=>b.wins-a.wins);
     setDarkRecords(records);
   }
@@ -2821,10 +2860,25 @@ function handleOnlineRoomUpdate(room){
 
   if(room.status === 'finished' && !onlineFinishedHandled){
     onlineFinishedHandled = true;
+    recordOnlineWinIfLocalWinner(room);
     if(!onlineBattleStarted) setupOnlineBattle(room);
     const winner = room.winner === 'player1' ? P1 : P2;
     showVictoryScreen(winner, ()=>showVsMode());
   }
+}
+
+
+function recordOnlineWinIfLocalWinner(room){
+  const localWon = (room.winner === onlinePlayerSlot);
+  if(!localWon) return;
+  let initials = localStorage.getItem('ABA_last_initials') || '';
+  if(!initials){
+    initials = prompt('ONLINE WIN! Enter 3 initials:', 'AAA') || 'AAA';
+    initials = cleanInitialsLive(initials);
+    localStorage.setItem('ABA_last_initials', initials);
+  }
+  addOnlineWin(initials);
+  buildLeader();
 }
 
 function setupOnlineBattle(room){
