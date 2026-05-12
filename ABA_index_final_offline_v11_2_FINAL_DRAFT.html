@@ -1,0 +1,3108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Anime Battle Arena - Final Offline Study Build</title>
+
+<style>
+/* =========================================================
+   🔵 BLUE 🔵 HELP SECTIONS = guide headers
+   🟤 BROWN NOTES = what you should read/change
+   ⚫ BLACK ⚫ CODE AREAS = the actual code underneath
+   Plain HTML/CSS files cannot truly color comments inside Notepad,
+   so the color coding uses emoji labels that are easy to search.
+========================================================= */
+
+/* =========================================================
+   🔵 HELP SECTION 00: GLOBAL RESET
+   Keeps page clean, no scroll bars, no white browser space.
+========================================================= */
+*{box-sizing:border-box}
+html,body{
+  margin:0;
+  padding:0;
+  width:100vw;
+  height:100vh;
+  overflow:hidden;
+  background:#000;
+  color:#fff;
+  font-family:Impact,Haettenschweiler,'Arial Narrow Bold',sans-serif;
+  letter-spacing:1px;
+  user-select:none;
+}
+button{
+  font-family:inherit;
+  letter-spacing:1px;
+  cursor:pointer;
+  color:#fff;
+  border:none;
+  background:none;
+}
+
+/* =========================================================
+   🔵 🔵 HELP SECTION 01: OUTER ARCADE FRAME / PSD TEMPLATE
+   🟤 🟤 NOTE:
+   The full outside frame is now ONE image exported from Photoshop.
+   Update this file whenever you want to change ads/characters/frame art:
+
+   assets/ABA_FRAME.jpg
+
+   Keep the actual gameplay inside the transparent/open area of your PSD.
+   ========================================================= */
+
+/* ⚫ ⚫ CODE AREA: outer frame background */
+#arcadeFrame{
+  position:fixed;
+  inset:0;
+  width:100vw;
+  height:100vh;
+  background:#000 url('assets/ABA_FRAME.jpg') center/cover no-repeat;
+  overflow:hidden;
+}
+
+/* =========================================================
+   🔵 🔵 HELP SECTION 02: GAME WINDOW
+   🟤 🟤 NOTE:
+   This rectangle is where the playable game sits.
+   If your PSD opening does not line up, adjust:
+   left, top, width, height.
+   Larger top = game moves down.
+   Larger left = game moves right.
+   ========================================================= */
+
+
+/* =========================================================
+   🔵 HELP SECTION 01B: CLICKABLE AD HOTSPOTS
+   🟤 NOTE:
+   These invisible link boxes sit on top of your PSD frame.
+   Each one matches an ad space in your ABA_FRAME.jpg.
+
+   HOW TO USE:
+   1. Replace href="INSERT AD link here" with the real ad link.
+   2. Example: href="https://fame47.github.io/Comic-Run/"
+   3. Keep target="_blank" so the ad opens in a new tab.
+
+   AD SPACE MAP:
+   AD Space 1 = top-left horizontal banner
+   AD Space 2 = top-right horizontal banner
+   AD Space 3 = bottom horizontal banner
+   AD Space 4 = left vertical banner
+   AD Space 5 = right vertical banner
+
+   If you want to see the clickable areas while testing, change:
+   background:transparent; border:none;
+   to:
+   background:rgba(0,255,255,.18); border:2px solid rgba(0,255,255,.8);
+========================================================= */
+.adHotspot{
+  position:absolute;
+  display:block;
+  z-index:20;
+  background:transparent;
+  border:none;
+}
+
+/* ⚫ CODE AREA: AD Space 1 — top-left banner */
+#adSpace1{
+  left:12%;
+  top:3.5%;
+  width:31.8%;
+  height:10.6%;
+}
+
+/* ⚫ CODE AREA: AD Space 2 — top-right banner */
+#adSpace2{
+  left:56.2%;
+  top:3.5%;
+  width:31.8%;
+  height:10.6%;
+}
+
+/* ⚫ CODE AREA: AD Space 3 — bottom banner */
+#adSpace3{
+  left:10.5%;
+  top:84.5%;
+  width:79%;
+  height:10.5%;
+}
+
+/* ⚫ CODE AREA: AD Space 4 — left vertical banner */
+#adSpace4{
+  left:1.2%;
+  top:17%;
+  width:8.4%;
+  height:66%;
+}
+
+/* ⚫ CODE AREA: AD Space 5 — right vertical banner */
+#adSpace5{
+  left:90.3%;
+  top:17%;
+  width:8.4%;
+  height:66%;
+}
+
+#gameWindow{
+  position:absolute;
+  left:10.5%;
+  top:17%;
+  width:79%;
+  height:66%;
+  border:3px solid #d7b44a;
+  overflow:hidden;
+  background:#000;
+  box-shadow:0 0 25px rgba(255,215,80,.35);
+  z-index:5;
+}
+
+#game{
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:1920px;
+  height:1080px;
+  transform-origin:center center;
+  overflow:hidden;
+  background:#000;
+}
+
+/* Every game screen fills the 1920x1080 internal game canvas */
+.screen{
+  position:absolute;
+  inset:0;
+  width:1920px;
+  height:1080px;
+  display:none;
+  overflow:hidden;
+  background-size:cover;
+  background-position:center;
+}
+.screen.active{display:block}
+.shade{position:absolute;inset:0;background:rgba(0,0,0,.34);pointer-events:none}
+
+/* =========================================================
+   🔵 HELP SECTION 03: COMMON MENU STYLES
+========================================================= */
+.title{
+  font-size:clamp(46px,6vw,100px);
+  text-align:center;
+  
+  margin:0;
+  text-transform:uppercase;
+}
+.center{
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+}
+.panelBtn{
+  display:block;
+  width:min(760px,82vw);
+  margin:16px auto;
+  padding:18px 34px;
+  font-size:clamp(28px,3.1vw,54px);
+  text-transform:uppercase;
+  background:linear-gradient(90deg,rgba(0,0,0,.92),rgba(25,13,40,.85));
+  border:3px solid #f4c532;
+  box-shadow:0 0 22px rgba(247,199,47,.4),inset 0 0 22px rgba(0,0,0,.7);
+  clip-path:polygon(0 0,94% 0,100% 50%,94% 100%,0 100%);
+}
+.panelBtn:hover,.tabBtn:hover,.backBtn:hover,.smallToggle:hover{
+  transform:scale(1.04);
+  filter:brightness(1.35);
+  box-shadow:0 0 28px #fff,0 0 55px #ffd43d,inset 0 0 28px #ffd43d66;
+}
+.panelBtn.locked{
+  filter:grayscale(1) brightness(.45);
+  opacity:.55;
+}
+.subline{
+  display:block;
+  font-family:Arial,sans-serif;
+  font-size:18px;
+  letter-spacing:0;
+  color:#e6e6e6;
+  margin-top:3px;
+}
+
+/* Back/Next buttons moved UP so they do not fall outside the framed game */
+.backBtn,.introNext{
+  position:absolute;
+  font-size:30px;
+  padding:12px 25px;
+  border:2px solid #fff;
+  background:#070707cc;
+  z-index:30;
+}
+.backBtn{left:26px;bottom:70px}
+.introNext{right:34px;bottom:70px}
+
+.startPrompt{
+  position:absolute;
+  bottom:10%;
+  left:50%;
+  transform:translateX(-50%);
+  font-size:58px;
+  
+  animation:pulse 1.2s infinite;
+  z-index:5;
+}
+@keyframes pulse{50%{opacity:.45;transform:translateX(-50%) scale(1.04)}}
+
+/* =========================================================
+   🔵 HELP SECTION 04: MAIN MENU MUSIC/SFX TOGGLES
+========================================================= */
+.toggleRow{
+  display:flex;
+  gap:14px;
+  justify-content:center;
+  margin-top:12px;
+}
+.smallToggle{
+  font-size:22px;
+  padding:9px 18px;
+  border:2px solid #f4c532;
+  background:#000c;
+  color:#fff;
+}
+.smallToggle.off{
+  color:#ff4b4b;
+  border-color:#ff4b4b;
+}
+
+.volumeControls{
+  width:620px;
+  max-width:88%;
+  margin:12px auto 0;
+  padding:10px 14px;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  background:rgba(0,0,0,.45);
+  border:2px solid rgba(244,197,50,.75);
+}
+.volumeBox{
+  display:grid;
+  grid-template-columns:105px 1fr 48px;
+  gap:8px;
+  align-items:center;
+  font-family:Arial,sans-serif;
+  font-size:16px;
+  letter-spacing:0;
+  color:#ffd43d;
+}
+.volumeBox input[type="range"]{
+  width:100%;
+  accent-color:#ffd43d;
+  cursor:pointer;
+}
+.volumeValue{
+  color:#fff;
+  text-align:right;
+}
+
+/* =========================================================
+   🔵 HELP SECTION 05: INTRO / ENDING SCREENS
+   Images are changed by JS. The helper tries .png/.jpg/.jpeg/.webp.
+========================================================= */
+.introImg{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+.clickLayer{position:absolute;inset:0;z-index:4}
+
+
+/* =========================================================
+   🔵 HELP SECTION 05B: WORLD TOURNAMENT STORY PANELS
+   🟤 NOTE:
+   After each World Tournament win, the game can show a comic panel image.
+   File names expected inside assets:
+   story1.jpg, story2.jpg, story3.jpg, story4.jpg, story5.jpg, story6.jpg, story7.jpg
+========================================================= */
+.storyPlaceholder{
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  width:70%;
+  padding:40px;
+  text-align:center;
+  font-size:54px;
+  background:rgba(0,0,0,.70);
+  border:4px solid #ffd43d;
+  color:#ffd43d;
+  
+  z-index:3;
+}
+
+/* =========================================================
+   🔵 HELP SECTION 06: CHARACTER SELECT
+========================================================= */
+#selectTitle{
+  position:absolute;
+  top:32px;
+  left:0;
+  right:0;
+}
+.selectControl{
+  position:absolute;
+  top:150px;
+  left:50%;
+  transform:translateX(-50%);
+  display:flex;
+  gap:24px;
+  align-items:center;
+  justify-content:center;
+  z-index:60;
+  min-width:650px;
+}
+.selectedName{
+  min-width:300px;
+  height:68px;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  font-size:44px;
+  color:#fff;
+  
+  padding:7px 22px;
+  border:3px solid #f2d33e;
+  background:rgba(0,0,0,.78);
+}
+.roster{
+  position:absolute;
+  left:50%;
+  top:240px;
+  transform:translateX(-50%);
+  display:grid;
+  grid-template-columns:repeat(4,220px);
+  gap:24px;
+}
+.charTile{
+  position:relative;
+  width:220px;
+  height:172px;
+  border:4px solid #e6e6e6;
+  background:#000;
+  box-shadow:0 0 14px #fff5;
+  overflow:hidden;
+}
+.charTile img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+.charTile.available:hover,.charTile.selected{
+  border-color:#ffdf39;
+  box-shadow:0 0 25px #ffdf39,0 0 50px #ffdf3970;
+}
+.charTile.lockedTile img{filter:grayscale(1) brightness(.45)}
+.lockedText{
+  position:absolute;
+  bottom:12px;
+  left:0;
+  right:0;
+  text-align:center;
+  font-size:30px;
+  color:#ddd;
+  
+}
+.startFight.disabled{
+  opacity:.35;
+  pointer-events:none;
+}
+.startFight.ready{
+  animation:startReady .6s infinite alternate;
+  box-shadow:0 0 22px #ffd43d,0 0 55px #ffd43d;
+  color:#ffd43d;
+}
+@keyframes startReady{
+  0%{transform:translateX(-3px) rotate(-1deg)}
+  100%{transform:translateX(3px) rotate(1deg);filter:brightness(1.5)}
+}
+.selectHint{
+  position:absolute;
+  bottom:28px;
+  left:0;
+  right:0;
+  text-align:center;
+  font-family:Arial,sans-serif;
+  font-size:18px;
+  letter-spacing:0;
+}
+
+/* =========================================================
+   🔵 HELP SECTION 07: BATTLE HUD AND FIGHTERS
+========================================================= */
+#battle{background-color:#000}
+.hudName{
+  position:absolute;
+  top:55px;
+  font-size:64px;
+  line-height:.9;
+  color:#fff;
+  
+  z-index:80;
+}
+.hudName.left{left:175px}
+.hudName.right{right:175px;text-align:right}
+.hudPortrait{
+  position:absolute;
+  top:55px;
+  width:100px;
+  height:100px;
+  border:4px solid #fff;
+  background:#000;
+  object-fit:cover;
+  z-index:80;
+  box-shadow:0 0 14px #fff;
+}
+.hudPortrait.left{left:62px}
+.hudPortrait.right{right:62px}
+.hpBar{
+  position:absolute;
+  top:155px;
+  height:34px;
+  width:690px;
+  background:rgba(0,0,0,.6);
+  border:2px solid rgba(255,255,255,.55);
+  z-index:76;
+}
+.hpBar.left{left:62px}
+.hpBar.right{right:62px}
+.hpFill{height:100%;width:100%;transition:.25s}
+.hpFill.left{background:#8e18ff}
+.hpFill.right{background:#d7a400}
+.roundTracker{
+  position:absolute;
+  top:90px;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:85;
+  font-size:50px;
+  line-height:1;
+  padding:16px 36px;
+  color:#ffd83d;
+  border:3px solid #ffd83d;
+  background:rgba(0,0,0,.58);
+  
+}
+.winDots{
+  position:absolute;
+  top:118px;
+  z-index:82;
+  display:flex;
+  gap:8px;
+}
+.winDots.left{left:178px}
+.winDots.right{right:178px}
+.winDot{
+  width:18px;
+  height:18px;
+  border-radius:50%;
+  border:2px solid #fff;
+  background:#111;
+  box-shadow:0 0 8px #000;
+}
+.winDot.on{
+  background:#ffd43d;
+  box-shadow:0 0 18px #ffd43d;
+}
+.gems{
+  position:absolute;
+  top:205px;
+  display:flex;
+  gap:14px;
+  z-index:82;
+}
+.gems.left{left:62px}
+.gems.right{right:62px}
+.gem{
+  width:44px;
+  height:44px;
+  transform:rotate(45deg);
+  border:3px solid #333;
+  background:#050505;
+  box-shadow:0 0 8px #000;
+}
+.gem.full{background:#fff;box-shadow:0 0 18px #fff}
+.gem.purple.full{background:#8c1cff}
+.gem.gold.full{background:#ffd33c}
+.gem.green.full{background:#62ff1a}
+.gem.red.full{background:#ff3333}
+
+.fighter{
+  position:absolute;
+  top:250px;
+  height:500px;
+  width:auto;
+  max-width:none;
+  max-height:none;
+  object-fit:contain;
+  z-index:25;
+  
+  transition:opacity .12s,transform .12s;
+}
+.fighter.left{left:250px;color:#9d35ff}
+.fighter.right{right:250px;color:#ffcf31}
+.fighter.hit{animation:hit .25s}
+@keyframes hit{
+  25%{transform:translateX(-18px)}
+  50%{transform:translateX(18px)}
+  75%{transform:translateX(-10px)}
+}
+
+/* =========================================================
+   🔵 HELP SECTION 08: BATTLE BUTTONS
+========================================================= */
+.actionBar{
+  position:absolute;
+  left:50%;
+  top:785px;
+  transform:translateX(-50%);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:28px;
+  height:150px;
+  z-index:60;
+}
+.actionBtn{
+  width:150px;
+  height:112px;
+  padding:0;
+  margin:0;
+  border:0;
+  outline:none;
+  background:transparent;
+  overflow:visible;
+  cursor:pointer;
+  transition:transform .14s ease, filter .14s ease;
+  
+}
+.actionBtn img{
+  width:150px;
+  height:112px;
+  object-fit:contain;
+  display:block;
+  pointer-events:none;
+}
+.actionBtn:hover{
+  transform:translateY(-12px) scale(1.14);
+  
+}
+.actionBtn.disabled{
+  filter:grayscale(1) brightness(.35);
+  opacity:.45;
+}
+
+/* =========================================================
+   🔵 HELP SECTION 09: BATTLE TEXT
+   Smaller and closer to the round box.
+========================================================= */
+.roundText{
+  position:absolute;
+  left:50%;
+  top:230px;
+  transform:translateX(-50%);
+  font-size:42px;
+  line-height:1;
+  text-align:center;
+  color:#fff;
+  
+  max-width:900px;
+  z-index:90;
+  pointer-events:none;
+}
+
+/* =========================================================
+   🔵 HELP SECTION 10: SPECIAL MOVE + VICTORY OVERLAYS
+   These are now above EVERYTHING, including health and round bars.
+========================================================= */
+.spOverlay,
+.victoryOverlay{
+  position:absolute !important;
+  inset:0 !important;
+  width:100% !important;
+  height:100% !important;
+  background:#000 !important;
+  z-index:99999 !important;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden !important;
+  pointer-events:none;
+}
+.spOverlay.show,
+.victoryOverlay.show{display:flex !important}
+.spOverlay img,
+.victoryOverlay img{
+  position:absolute !important;
+  inset:0 !important;
+  width:100% !important;
+  height:100% !important;
+  object-fit:cover !important;
+  z-index:100000 !important;
+}
+.flash{
+  position:absolute;
+  inset:0;
+  background:#fff;
+  opacity:0;
+  z-index:100001;
+  pointer-events:none;
+}
+.flash.on{animation:flash .32s}
+@keyframes flash{
+  0%,100%{opacity:0}
+  35%{opacity:.85}
+}
+.spOverlay.shake img{animation:spShake .16s infinite}
+@keyframes spShake{
+  0%{transform:translate(0,0) scale(1.02)}
+  25%{transform:translate(-14px,8px) scale(1.025)}
+  50%{transform:translate(12px,-7px) scale(1.02)}
+  75%{transform:translate(-8px,-10px) scale(1.025)}
+  100%{transform:translate(10px,7px) scale(1.02)}
+}
+
+/* =========================================================
+   🔵 HELP SECTION 11: INFO PAGES / LEADERBOARDS / CARDS
+========================================================= */
+.pageContent{
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  width:min(1150px,88vw);
+  max-height:850px;
+  overflow:auto;
+  padding:34px;
+  background:rgba(0,0,0,.74);
+  border:3px solid #f1c832;
+  box-shadow:0 0 30px #000;
+}
+.pageContent h2{
+  font-size:72px;
+  margin:0 0 18px;
+  text-align:center;
+  
+}
+.pageContent p,.pageContent li{
+  font-family:Arial,sans-serif;
+  font-size:23px;
+  line-height:1.35;
+  letter-spacing:0;
+}
+.tabs,.vsTabs{
+  display:flex;
+  gap:18px;
+  justify-content:center;
+  flex-wrap:wrap;
+  margin:18px 0;
+}
+.tabBtn{
+  font-size:34px;
+  padding:14px 26px;
+  border:3px solid #f0c834;
+  background:#000d;
+  min-width:260px;
+}
+.tabPanel{display:none}
+.tabPanel.active{display:block}
+.leaderBox{
+  border:2px solid #fff;
+  padding:20px;
+  background:linear-gradient(180deg,#111b,#000b);
+  box-shadow:0 0 24px #7f32ff66;
+}
+.leaderBox h3{
+  font-size:42px;
+  margin:0 0 10px;
+  color:#ffd43d;
+}
+.leaderRow{
+  font-family:Arial,sans-serif;
+  font-size:24px;
+  padding:10px;
+  border-bottom:1px solid #ffffff33;
+  letter-spacing:0;
+}
+.cardGrid{
+  display:grid;
+  grid-template-columns:repeat(4,242px);
+  justify-content:center;
+  gap:24px;
+}
+.cardWrap{text-align:center}
+.cardName{
+  text-align:center;
+  font-size:34px;
+  margin-bottom:8px;
+}
+.cardSlot{
+  width:242px;
+  height:339px;
+  border:4px solid #fff;
+  background:#000;
+  position:relative;
+  overflow:hidden;
+  box-shadow:0 0 26px #f1c83255;
+}
+.cardSlot img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+.cardSlot.lockedCard img{filter:grayscale(1) brightness(.3)}
+.cardSlot .unlockText{
+  position:absolute;
+  inset:auto 0 16px 0;
+  text-align:center;
+  font-size:24px;
+  color:#fff;
+  
+  background:#0009;
+  padding:6px;
+}
+.countText{
+  font-family:Arial,sans-serif;
+  font-size:18px;
+  letter-spacing:0;
+  margin-top:8px;
+}
+.cardModal{
+  position:absolute;
+  inset:0;
+  background:rgba(0,0,0,.86);
+  z-index:99998;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+}
+.cardModal.show{display:flex}
+.cardModal img{
+  height:min(86vh,820px);
+  max-width:92vw;
+  object-fit:contain;
+  box-shadow:0 0 45px #f1c832;
+  border:4px solid #f1c832;
+}
+.cardModalClose{
+  margin-top:14px;
+  font-size:26px;
+  padding:10px 24px;
+  border:2px solid #fff;
+  background:#000;
+}
+
+/* =========================================================
+   🔵 HELP SECTION 12: HOW TO PLAY PAGE
+========================================================= */
+.howPage{
+  top:50%;
+  max-height:860px;
+}
+.howSimple{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:10px;
+  margin-bottom:18px;
+}
+.howMove{
+  display:flex;
+  align-items:center;
+  gap:16px;
+  background:#080808cc;
+  border:2px solid #ffffff33;
+  border-left:6px solid #ffd43d;
+  padding:10px 14px;
+}
+.howMove img{
+  width:190px;
+  height:90px;
+  object-fit:contain;
+  flex:0 0 auto;
+}
+.howMove span{
+  font-size:30px;
+  color:#ffd43d;
+  
+}
+.howMove p{
+  font-size:18px;
+  margin:4px 0 0;
+  color:#fff;
+}
+.damageRules{
+  margin-top:12px;
+  background:#000a;
+  border:2px solid #ffffff22;
+  padding:12px;
+}
+.damageRules h3{
+  font-size:38px;
+  color:#ffd43d;
+  margin:0 0 8px;
+  text-align:center;
+  
+}
+.damageRules div{
+  font-family:Arial,sans-serif;
+  font-size:18px;
+  line-height:1.28;
+  letter-spacing:0;
+  padding:5px 8px;
+  border-bottom:1px solid #ffffff1f;
+}
+.damageRules span{
+  font-family:Impact;
+  color:#ffd43d;
+  font-size:22px;
+  letter-spacing:1px;
+}
+.damageRules b{color:#fff}
+
+/* =========================================================
+   🔵 HELP SECTION 13: PAUSE MENU
+========================================================= */
+.pauseOverlay{
+  position:absolute;
+  inset:0;
+  background:rgba(0,0,0,.88);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:9999;
+}
+.pauseOverlay.hidden{display:none}
+.pauseBox,.pauseHowBox{
+  width:min(950px,92vw);
+  max-height:92vh;
+  overflow:auto;
+  background:#090909ee;
+  border:3px solid #ffd43d;
+  border-radius:20px;
+  padding:30px;
+  text-align:center;
+  box-shadow:0 0 45px #ffd43d88;
+}
+.pauseBox h2,.pauseHowBox h2{
+  font-size:72px;
+  margin:0 0 25px;
+  color:#ffd43d;
+  
+}
+.pauseMenuBtn{
+  display:block;
+  width:min(440px,80vw);
+  margin:14px auto;
+  padding:16px 20px;
+  font-size:34px;
+  background:#111;
+  border:2px solid #fff;
+  color:#fff;
+}
+.pauseRules{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:10px;
+}
+.pauseRules div{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  text-align:left;
+  background:#141414;
+  border:1px solid #ffffff33;
+  border-left:5px solid #ffd43d;
+  padding:10px;
+}
+.pauseRules img{
+  width:150px;
+  height:90px;
+  object-fit:contain;
+}
+.pauseRules p{
+  font-family:Arial,sans-serif;
+  font-size:20px;
+  line-height:1.25;
+  margin:0;
+  letter-spacing:0;
+}
+.pauseRules b{color:#ffd43d}
+
+/* =========================================================
+   🔵 🔵 HELP SECTION 14: RESPONSIVE FRAME ADJUSTMENT
+   🟤 🟤 NOTE:
+   Because the frame is now one JPG, the browser simply scales it.
+   This rule gives the game window more room on small screens.
+========================================================= */
+@media(max-width:1100px){
+  #gameWindow{left:7%;top:15%;width:86%;height:70%}
+}
+
+/* =========================================================
+   🔥 HARD FIX: START FIGHT BUTTON SIZE
+   This is placed at the END of CSS so it overrides older rules.
+========================================================= */
+#startFight.startFight,
+button#startFight,
+#select .startFight{
+  width:300px !important;
+  min-width:300px !important;
+  height:68px !important;
+  min-height:68px !important;
+  padding:7px 22px !important;
+  font-size:44px !important;
+  line-height:1 !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  text-align:center !important;
+  border:3px solid #f3ce33 !important;
+  background:rgba(0,0,0,.78) !important;
+  color:#fff !important;
+  white-space:nowrap !important;
+  z-index:999 !important;
+  transform:none !important;
+  box-sizing:border-box !important;
+  
+}
+
+#startFight.startFight.ready,
+button#startFight.ready,
+#select .startFight.ready{
+  color:#ffd43d !important;
+  box-shadow:0 0 22px #ffd43d,0 0 55px #ffd43d !important;
+  transform:none !important;
+}
+
+#select .selectControl{
+  top:150px !important;
+  min-width:650px !important;
+  gap:24px !important;
+  z-index:999 !important;
+}
+
+
+/* =========================================================
+   🔵 ONLINE MULTIPLAYER ROOM PANEL
+========================================================= */
+.onlineBox{
+  margin-top:18px;
+  padding:18px;
+  border:2px solid #ffd43d;
+  background:rgba(0,0,0,.55);
+  text-align:center;
+}
+.onlineCode{
+  font-size:54px;
+  color:#ffd43d;
+  
+  letter-spacing:4px;
+  margin:10px 0;
+}
+.onlineInput{
+  font-size:34px;
+  padding:12px 18px;
+  background:#000;
+  color:#fff;
+  border:3px solid #ffd43d;
+  text-align:center;
+  text-transform:uppercase;
+  width:min(420px,80vw);
+  margin:12px auto;
+  display:block;
+}
+.onlineStatus{
+  font-family:Arial,sans-serif;
+  font-size:20px;
+  letter-spacing:0;
+  color:#fff;
+  margin-top:10px;
+}
+
+
+/* =========================================================
+   🔥 ONLINE SELECT STATUS BOX
+========================================================= */
+#selectHint.onlineRoomStatus{
+  position:absolute !important;
+  left:50% !important;
+  bottom:28px !important;
+  transform:translateX(-50%) !important;
+  width:760px !important;
+  max-width:88% !important;
+  min-height:96px !important;
+  padding:18px 26px !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  text-align:center !important;
+  font-family:Impact,Haettenschweiler,'Arial Narrow Bold',sans-serif !important;
+  font-size:34px !important;
+  line-height:1.05 !important;
+  letter-spacing:1px !important;
+  color:#ffd43d !important;
+  background:rgba(0,0,0,.86) !important;
+  border:4px solid #ffd43d !important;
+  box-shadow:0 0 22px #ffd43d, inset 0 0 18px rgba(255,212,61,.25) !important;
+  
+  z-index:999 !important;
+}
+
+
+/* =========================================================
+   🏁 FINAL DRAFT VISUAL CLEANUP
+   Cleaner menus, no title glow, easier room-code reading.
+========================================================= */
+
+/* Remove glow from main menu titles and screen titles */
+h1,h2,.title,.mainTitle,.menuTitle,.pageTitle,
+#main h1,#main h2,
+#select h1,#select h2,
+#vs h1,#vs h2,
+#leader h1,#leader h2,
+#how h1,#how h2,
+#darkNameScreen h1,#darkNameScreen h2,
+#dtIntro h1,#dtIntro h2{
+  
+  filter:none !important;
+}
+
+/* Online room status: white readable words, big room code */
+#selectHint.onlineRoomStatus{
+  color:#fff !important;
+  border:4px solid #fff !important;
+  box-shadow:0 0 0 transparent, inset 0 0 18px rgba(255,255,255,.12) !important;
+  
+  background:rgba(0,0,0,.88) !important;
+  font-size:32px !important;
+  line-height:1.08 !important;
+}
+
+#selectHint.onlineRoomStatus .roomCodeBig{
+  display:block !important;
+  margin-top:8px !important;
+  font-size:58px !important;
+  line-height:1 !important;
+  letter-spacing:5px !important;
+  color:#ffd43d !important;
+  
+}
+
+/* VS room code display panel: make the code louder than the labels */
+.onlineBox{
+  border-color:#fff !important;
+  box-shadow:none !important;
+}
+.onlineBox div[style*="color:#ffd43d"]{
+  color:#fff !important;
+  
+}
+.onlineCode{
+  font-size:68px !important;
+  color:#ffd43d !important;
+  
+  letter-spacing:6px !important;
+}
+.onlineStatus{
+  color:#fff !important;
+  
+}
+
+</style>
+</head>
+
+<body>
+<div id="arcadeFrame">
+
+  <!-- 🔵 CLICKABLE AD HOTSPOTS: Replace each href with the real ad link when ready. -->
+  <!-- AD Space 1: top-left horizontal banner -->
+  <a id="adSpace1" class="adHotspot" href="INSERT AD link here" target="_blank" rel="noopener noreferrer" aria-label="AD Space 1" title="AD Space 1"></a>
+
+  <!-- AD Space 2: top-right horizontal banner -->
+  <a id="adSpace2" class="adHotspot" href="INSERT AD link here" target="_blank" rel="noopener noreferrer" aria-label="AD Space 2" title="AD Space 2"></a>
+
+  <!-- AD Space 3: bottom horizontal banner -->
+  <a id="adSpace3" class="adHotspot" href="INSERT AD link here" target="_blank" rel="noopener noreferrer" aria-label="AD Space 3" title="AD Space 3"></a>
+
+  <!-- AD Space 4: left vertical banner -->
+  <a id="adSpace4" class="adHotspot" href="INSERT AD link here" target="_blank" rel="noopener noreferrer" aria-label="AD Space 4" title="AD Space 4"></a>
+
+  <!-- AD Space 5: right vertical banner -->
+  <a id="adSpace5" class="adHotspot" href="INSERT AD link here" target="_blank" rel="noopener noreferrer" aria-label="AD Space 5" title="AD Space 5"></a>
+
+  <!-- =====================================================
+       🔵 🔵 HELP SECTION HTML A: PSD FRAME BACKGROUND
+       🟤 🟤 NOTE:
+       There are no separate HTML ad boxes anymore.
+       Ads, logos, side characters, and decoration should be placed
+       inside your Photoshop file and exported as:
+
+       assets/ABA_FRAME.jpg
+
+       This makes visual updates easy: edit PSD → export JPG → refresh.
+  ====================================================== -->
+
+  <!-- =====================================================
+       🔵 🔵 HELP SECTION HTML B: GAME WINDOW
+       🟤 🟤 NOTE:
+       Your actual game starts here.
+       The game is scaled into the center opening of ABA_FRAME.jpg.
+  ====================================================== -->
+  <div id="gameWindow">
+    <div id="game">
+
+      <div id="start" class="screen active">
+        <div class="clickLayer" onclick="goMain()"></div>
+        <div class="startPrompt">CLICK TO START</div>
+      </div>
+
+      <div id="main" class="screen">
+        <div class="shade"></div>
+        <div class="center" style="top:53%">
+          <button class="panelBtn" onclick="startWorld()">World Tournament</button>
+          <button class="panelBtn" onclick="showVsMode()">VS Mode</button>
+          <button id="darkMenuBtn" class="panelBtn" onclick="tryDarkTournament()">The Dark Tournament<span id="darkSubline" class="subline">Complete World Tournament</span></button>
+          <button class="panelBtn" onclick="showLeader()">Leaderboards</button>
+          <button class="panelBtn" onclick="showScreen('how')">How To Play</button>
+
+          <div class="toggleRow">
+            <button id="musicToggle" class="smallToggle" onclick="toggleMusic()">MUSIC: ON</button>
+            <button id="sfxToggle" class="smallToggle" onclick="toggleSfx()">SFX: ON</button>
+          </div>
+
+          <!-- 🔵 HELP: Volume sliders. Values save automatically in the browser. -->
+          <div class="volumeControls">
+            <label class="volumeBox">MUSIC
+              <input id="musicSlider" type="range" min="0" max="100" value="45" oninput="setMusicVolume(this.value)">
+              <span id="musicVolText" class="volumeValue">45%</span>
+            </label>
+            <label class="volumeBox">SFX
+              <input id="sfxSlider" type="range" min="0" max="100" value="38" oninput="setSfxVolume(this.value)">
+              <span id="sfxVolText" class="volumeValue">38%</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div id="intro" class="screen">
+        <img id="introImg" class="introImg" alt="intro">
+        <button class="introNext" onclick="nextIntro()">NEXT</button>
+      </div>
+
+      <div id="ending" class="screen">
+        <img id="endingImg" class="introImg" alt="ending">
+        <button class="introNext" onclick="nextEnding()">NEXT</button>
+      </div>
+
+      <div id="story" class="screen">
+        <img id="storyImg" class="introImg" alt="world tournament story panel">
+        <div id="storyPlaceholder" class="storyPlaceholder">STORY PANEL MISSING<br><span style="font-family:Arial,sans-serif;font-size:24px;letter-spacing:0">Add story images as story1.jpg through story7.jpg</span></div>
+        <button class="introNext" onclick="nextStoryPanel()">NEXT</button>
+      </div>
+
+      <div id="dtIntro" class="screen">
+        <img id="dtIntroImg" class="introImg" alt="dark tournament intro">
+        <button class="introNext" onclick="beginBattle('dark')">ENTER</button>
+      </div>
+
+      <div id="select" class="screen">
+        <div class="shade"></div>
+        <h1 id="selectTitle" class="title">Choose Your Champion</h1>
+        <div class="selectControl">
+          <div id="nameBanner" class="selectedName"></div>
+          <button id="startFight" class="startFight disabled" onclick="startSelectedFight()">START FIGHT</button>
+        </div>
+        <div id="roster" class="roster"></div>
+        <div class="selectHint" id="selectHint">Pick your fighter.</div>
+        <button class="backBtn" onclick="backFromSelect()">BACK</button>
+      </div>
+
+      <div id="battle" class="screen">
+        <div class="shade"></div>
+        <img id="p1Portrait" class="hudPortrait left" alt="">
+        <img id="p2Portrait" class="hudPortrait right" alt="">
+        <div id="p1Name" class="hudName left">P1</div>
+        <div id="p2Name" class="hudName right">P2</div>
+        <div class="hpBar left"><div id="p1Hp" class="hpFill left"></div></div>
+        <div class="hpBar right"><div id="p2Hp" class="hpFill right"></div></div>
+        <div id="p1Gems" class="gems left"></div>
+        <div id="p2Gems" class="gems right"></div>
+        <div id="roundTracker" class="roundTracker">ROUND 1</div>
+        <div id="p1Wins" class="winDots left"></div>
+        <div id="p2Wins" class="winDots right"></div>
+        <img id="p1Sprite" class="fighter left" alt="">
+        <img id="p2Sprite" class="fighter right" alt="">
+        <div id="roundText" class="roundText"></div>
+        <div id="actionBar" class="actionBar"></div>
+        <div id="spOverlay" class="spOverlay"><img id="spImg" alt=""></div>
+        <div id="victoryOverlay" class="victoryOverlay"><img id="victoryImg" alt=""></div>
+        <div id="flash" class="flash"></div>
+      </div>
+
+      <div id="continueScreen" class="screen">
+        <div class="shade"></div>
+        <div class="pageContent">
+          <h2>CONTINUE?</h2>
+          <p id="continueText" style="text-align:center">Lives remaining: 2</p>
+          <button class="panelBtn" onclick="continueRun()">Continue</button>
+          <button class="panelBtn" onclick="quitRun()">Quit To Main Menu</button>
+        </div>
+      </div>
+
+      <div id="darkNameScreen" class="screen">
+        <div class="shade"></div>
+        <div class="pageContent">
+          <h2>DARK TOURNAMENT RECORD</h2>
+          <p id="darkFinalText" style="text-align:center">You survived 0 fights.</p>
+          <input id="darkNameInput" type="text" inputmode="text" autocomplete="off" maxlength="3" placeholder="ABC" style="font-size:34px;padding:12px 18px;background:#000;color:#fff;border:3px solid #ffd43d;text-align:center;text-transform:uppercase;width:min(520px,80vw);margin:12px auto;display:block">
+          <button class="panelBtn" onclick="saveDarkRecord()">Save Record</button>
+          <button class="panelBtn" onclick="saveDarkRecord(true)">Skip / Main Menu</button>
+        </div>
+      </div>
+
+      <div id="vs" class="screen">
+        <div class="shade"></div>
+        <div class="pageContent">
+          <h2>VS MODE</h2>
+          <div class="vsTabs">
+            <button class="tabBtn" onclick="startArcadeSelect()">Arcade Mode</button>
+            <button class="tabBtn" onclick="createOnlineArena()">Create Arena</button>
+            <button class="tabBtn" onclick="showVsTab('join')">Join Fight</button>
+          </div>
+
+          <div id="vsInfo" style="font-size:34px;color:#a56bff;text-align:center;margin-top:20px">
+            Choose Arcade Mode for CPU battles, or create/join an online arena.
+          </div>
+
+          <div id="create" class="tabPanel">
+            <div class="onlineBox">
+              <div style="font-size:34px;color:#ffd43d">ROOM CODE</div>
+              <div id="roomCodeDisplay" class="onlineCode">----</div>
+              <div id="createStatus" class="onlineStatus">Create Arena will generate a room code.</div>
+            </div>
+          </div>
+
+          <div id="join" class="tabPanel">
+            <div class="onlineBox">
+              <div style="font-size:34px;color:#ffd43d">ENTER ROOM CODE</div>
+              <input id="joinRoomInput" class="onlineInput" maxlength="6" placeholder="ABA47">
+              <button class="panelBtn" onclick="joinOnlineArena()">JOIN ARENA</button>
+              <div id="joinStatus" class="onlineStatus">Ask Player 1 for the room code.</div>
+            </div>
+          </div>
+        </div>
+        <button class="backBtn" onclick="leaveOnlineRoom(); showScreen('main')">BACK</button>
+      </div>
+
+      <div id="leader" class="screen">
+        <div class="shade"></div>
+        <div class="pageContent">
+          <h2>LEADERBOARDS</h2>
+          <div class="tabs">
+            <button class="tabBtn" onclick="leaderTab('darkWins')">Dark Tournament Wins</button>
+            <button class="tabBtn" onclick="leaderTab('onlineWins')">Online Wins</button>
+            <button class="tabBtn" onclick="leaderTab('cardsTab')">Card Collection</button>
+          </div>
+          <div id="darkWins" class="tabPanel active">
+            <div class="leaderBox">
+              <h3>Dark Tournament Top 10</h3>
+              <div id="darkRows"></div>
+            </div>
+          </div>
+          <div id="onlineWins" class="tabPanel">
+            <div class="leaderBox">
+              <h3>Online Wins</h3>
+              <div class="leaderRow">Coming soon: Create Arena / Join Fight records.</div>
+            </div>
+          </div>
+          <div id="cardsTab" class="tabPanel">
+            <p style="text-align:center">Cards unlock after 15 Dark Tournament wins with that fighter.</p>
+            <div id="cardGrid" class="cardGrid"></div>
+          </div>
+        </div>
+        <div id="cardModal" class="cardModal" onclick="closeCardModal()">
+          <img id="cardModalImg" alt="">
+          <button class="cardModalClose">CLOSE</button>
+        </div>
+        <button class="backBtn" onclick="showScreen('main')">BACK</button>
+      </div>
+
+      <div id="how" class="screen">
+        <div class="shade"></div>
+        <div class="pageContent howPage">
+          <h2>HOW TO PLAY</h2>
+          <div class="howSimple">
+            <div class="howMove"><img data-img="ATTACKBUTTON"><div><span>Attack beats Defend</span><p>Deals 2 damage to Defend and Power Up. Blocks 1 damage from Attack.</p></div></div>
+            <div class="howMove"><img data-img="DEFENDBUTTON"><div><span>Defend beats Counter</span><p>Deals 2 damage to Counter. Blocks 2 damage from Counter and Special Move.</p></div></div>
+            <div class="howMove"><img data-img="COUNTERBUTTON"><div><span>Counter beats Attack</span><p>Deals 2 damage to Attack and 4 damage to Special Attack.</p></div></div>
+            <div class="howMove"><img data-img="POWERUPBUTTON"><div><span>Power Up doubles your next attack</span><p>Does not activate if you take damage from Attack or Special Attack.</p></div></div>
+            <div class="howMove"><img data-img="SPECIALMOVEBUTTON"><div><span>Special Attack deals 4 damage</span><p>Hits Attack, Defend and Power Up. If Countered, you take 4 damage. Gems activate when you take damage.</p></div></div>
+          </div>
+
+          <div class="damageRules">
+            <h3>Damage Rules</h3>
+            <div><span>[Attack]</span> deals 2 damage against <b>[Defend]</b> and <b>[Power Up]</b></div>
+            <div><span>[Defend]</span> deals 2 damage against <b>[Counter]</b></div>
+            <div><span>[Counter]</span> deals 2 damage to <b>[Attack]</b> and 4 damage to <b>[Special Attack]</b></div>
+            <div><span>[Power Up]</span> No damage.</div>
+            <div><span>[Special Attack]</span> deals 4 damage to <b>[Attack]</b>, <b>[Defend]</b> and <b>[Power Up]</b></div>
+          </div>
+
+          <div class="damageRules">
+            <h3>Block Rules</h3>
+            <div><span>[Attack]</span> blocks 1 damage from <b>[Attack]</b></div>
+            <div><span>[Defend]</span> blocks 2 damage from <b>[Counter]</b> and <b>[Special Move]</b></div>
+            <div><span>[Counter]</span> blocks 2 damage from <b>[Attack]</b> and 4 damage from <b>[Special Attack]</b></div>
+            <div><span>[Power Up]</span> No block.</div>
+            <div><span>[Special Attack]</span> blocks all damage from <b>[Attack]</b>, <b>[Defend]</b> and <b>[Power Up]</b></div>
+          </div>
+        </div>
+        <button class="backBtn" onclick="showScreen('main')">BACK</button>
+      </div>
+
+      <div id="pauseOverlay" class="pauseOverlay hidden">
+        <div class="pauseBox">
+          <h2>PAUSED</h2>
+          <button class="pauseMenuBtn" onclick="resumeGame()">Resume Fight</button>
+          <button class="pauseMenuBtn" onclick="openPauseHow()">How To Play</button>
+          <button class="pauseMenuBtn" onclick="pauseToMain()">Main Menu</button>
+        </div>
+      </div>
+
+      <div id="pauseHowOverlay" class="pauseOverlay hidden">
+        <div class="pauseHowBox">
+          <h2>HOW TO PLAY</h2>
+          <div class="pauseRules">
+            <div><img data-img="ATTACKBUTTON"><p><b>Attack:</b> Beats Defend. Deals 2 to Defend and Power Up.</p></div>
+            <div><img data-img="DEFENDBUTTON"><p><b>Defend:</b> Beats Counter. Blocks damage.</p></div>
+            <div><img data-img="COUNTERBUTTON"><p><b>Counter:</b> Beats Attack and stops Special Attack.</p></div>
+            <div><img data-img="POWERUPBUTTON"><p><b>Power Up:</b> Doubles your next attack if not interrupted.</p></div>
+            <div><img data-img="SPECIALMOVEBUTTON"><p><b>Special:</b> Uses 3 gems. Deals 4 damage, but loses to Counter.</p></div>
+          </div>
+          <button class="pauseMenuBtn" onclick="backToPause()">Back</button>
+        </div>
+      </div>
+
+      <audio id="music" loop></audio>
+    </div>
+  </div>
+</div>
+
+
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+
+<script>
+/* =========================================================
+   🔵 HELP SECTION JS 01: ASSET HELPERS
+   Folder setup:
+   ABA_index_arcade_frame_study_v4.html
+   assets/
+
+   The helper tries .png, .jpg, .jpeg, .webp for backgrounds.
+========================================================= */
+const A = 'assets/';
+const IMG_EXTS = ['.png','.jpg','.jpeg','.webp'];
+const SOUND_EXT = '.mp3';
+
+/* =========================================================
+   🔵 FIREBASE MULTIPLAYER CONFIG
+========================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyDp3HITaCKZBTnsO_142xEcwNWwFCpcEx8",
+  authDomain: "anime-battle-arena-fe819.firebaseapp.com",
+  databaseURL: "https://anime-battle-arena-fe819-default-rtdb.firebaseio.com",
+  projectId: "anime-battle-arena-fe819",
+  storageBucket: "anime-battle-arena-fe819.firebasestorage.app",
+  messagingSenderId: "411031304988",
+  appId: "1:411031304988:web:c9f35a5f93a2fcf4a218d9",
+  measurementId: "G-RB5BV5Q4HP"
+};
+
+let firebaseReady = false;
+let onlineDb = null;
+try{
+  if(window.firebase){
+    firebase.initializeApp(firebaseConfig);
+    onlineDb = firebase.database();
+    firebaseReady = true;
+  }
+}catch(e){
+  console.warn('Firebase init error:', e);
+}
+
+let onlineRoomCode = null;
+let onlinePlayerSlot = null; // player1 or player2
+let onlineRoomRef = null;
+let onlineBattleStarted = false;
+let onlineLastRound = 0;
+let onlineLastTurn = 0;
+let onlineFinishedHandled = false;
+
+
+function img(name){ return A + name + '.png'; }
+function soundFile(name){ return A + name + SOUND_EXT; }
+
+function setImgWithFallback(el, name){
+  if(!el) return;
+  let i = 0;
+  function tryNext(){
+    if(i >= IMG_EXTS.length) return;
+    el.onerror = function(){ i++; tryNext(); };
+    el.src = A + name + IMG_EXTS[i];
+  }
+  tryNext();
+}
+
+function setBgWithFallback(el, name){
+  if(!el) return;
+
+  const aliasMap = {
+    'destroyed arenascreen':['destroyed arenascreen','destoryed arenascreen','destroyed_arena','destroyed arena','destroyed arenas']
+  };
+
+  const namesToTry = aliasMap[name] || [name];
+  let nameIndex = 0;
+  let extIndex = 0;
+
+  function tryNext(){
+    if(nameIndex >= namesToTry.length) return;
+
+    const test = new Image();
+    test.onload = function(){
+      el.style.backgroundImage = "url('" + A + namesToTry[nameIndex] + IMG_EXTS[extIndex] + "')";
+    };
+    test.onerror = function(){
+      extIndex++;
+      if(extIndex >= IMG_EXTS.length){
+        extIndex = 0;
+        nameIndex++;
+      }
+      tryNext();
+    };
+    test.src = A + namesToTry[nameIndex] + IMG_EXTS[extIndex];
+  }
+
+  tryNext();
+}
+
+/* =========================================================
+   🔵 HELP SECTION JS 02: BACKGROUNDS
+   Edit screen background file names here.
+========================================================= */
+const BG = {
+  start:'ABA STARTING SCREEN',
+  menu:'menu screens',
+  battle:'BATTLE SCREEN',
+  vs:'destroyed arenascreen',
+  vsBattle:'destroyed arenascreen',
+  dark:'DarkTournamentScreen',
+  destroyed:'destroyed arenascreen',
+  leaderboard:'leaderboardscreen',
+  dtIntro:'DT1'
+};
+
+/* =========================================================
+   🔵 HELP SECTION JS 03: GAME / UNLOCK SETTINGS
+========================================================= */
+const WORLD_ORDER = ['Vexar','Kaede','Ryuji','Drex','Raizen','Lumina','Zyron','Brakk'];
+const WORLD_PLAYER = 'Rujin';
+const START_UNLOCKED = ['Rujin','Raizen','Vexar','Kaede','Drex','Ryuji'];
+const WORLD_UNLOCKED = ['Zyron','Brakk','Lumina'];
+const CARD_UNLOCK_WINS = 15;
+
+/* 🟤 NOTE: Character click sounds use this simple naming pattern:
+   raizenname.mp3, vexarname.mp3, kaedename.mp3, drexname.mp3,
+   ryujiname.mp3, luminaname.mp3, zyronname.mp3, brakkname.mp3 */
+function characterNameSound(key){ return key.toLowerCase() + 'name'; }
+
+/* =========================================================
+   🔵 HELP SECTION JS 04: CHARACTERS
+========================================================= */
+const fighters = {
+  Raizen:{
+    name:'RAIZEN', role:'Hero', color:'gold', hp:12, spSound:'heroSP',
+    portrait:img('RAIZEN CHARACTER BUTTON'), card:img('raizen card'),
+    spScreen:img('RaizenSPscreen'), victory:img('RaizenVictoryscreen'),
+    sprites:{
+      idle:{left:img('RaizenIDLEleft'), right:img('RaizenIDLEright')},
+      attack:{left:img('RaizenATTACKleft'), right:img('RaizenATTACKright')},
+      defend:{left:img('RaizenBLOCKleft'), right:img('RaizenBLOCKright')},
+      counter:{left:img('RaizenCOUNTERleft'), right:img('RaizenCOUNTERright')},
+      power:{left:img('RaizenPOWERUPleft'), right:img('RaizenPOWERUPright')},
+      special:{left:img('RaizenSPleft'), right:img('RaizenSPright')}
+    }
+  },
+  Vexar:{
+    name:'VEXAR', role:'Anti-Hero', color:'purple', hp:12, spSound:'antiheroSP',
+    portrait:img('VEXAR CHARACTER BUTTON'), card:img('vexar card'),
+    spScreen:img('VexarSPscreen'), victory:img('vexarvictoryscreen'),
+    sprites:{
+      idle:{left:img('VexarIDLEleft'), right:img('VexarIDLEright')},
+      attack:{left:img('VexarATTACKleft'), right:img('VexarATTACKright')},
+      defend:{left:img('VexarBLOCKleft'), right:img('VexarBLOCKright')},
+      counter:{left:img('VexarCOUNTERleft'), right:img('VexarCOUNTERright')},
+      power:{left:img('VexarPOWERUPleft'), right:img('VexarPOWERUPright')},
+      special:{left:img('VexarSPleft'), right:img('VexarSPright')}
+    }
+  },
+  Kaede:{
+    name:'KAEDE', role:'Anti-Hero', color:'green', hp:12, spSound:'antiheroSP',
+    portrait:img('KAEDE CHARACTER BUTTON'), card:img('kaede card'),
+    spScreen:img('KaedeSPscreen'), victory:img('KaedeVictoryscreen'),
+    sprites:{
+      idle:{left:img('KaedeIDLEleft'), right:img('KaedeIDLEright')},
+      attack:{left:img('KaedeATTACKleft'), right:img('KaedeATTACKright')},
+      defend:{left:img('KaedeBLOCKINGleft'), right:img('KaedeBLOCKINGright')},
+      counter:{left:img('KaedeCOUNTERleft'), right:img('KaedeCOUNTERright')},
+      power:{left:img('KaedePOWERUPleft'), right:img('KaedePOWERUPright')},
+      special:{left:img('KaedeSPleft'), right:img('KaedeSPright')}
+    }
+  },
+  Drex:{
+    name:'DREX', role:'Hero', color:'green', hp:12, spSound:'heroSP',
+    portrait:img('DREX CHARACTER BUTTON'), card:img('drex card'),
+    spScreen:img('DrexSPscreen'), victory:img('drexvictoryscreen'),
+    sprites:{
+      idle:{left:img('DrexIDLEleft'), right:img('DrexIDLEright')},
+      attack:{left:img('DrexATTACKleft'), right:img('DrexATTACKright')},
+      defend:{left:img('DrexDEFENDLEFT'), right:img('DrexDEFENDright')},
+      counter:{left:img('DrexCOUNTERLEFT'), right:img('DrexCOUNTERright')},
+      power:{left:img('DrexPOWERUPleft'), right:img('DrexPOWERUPright')},
+      special:{left:img('DrexSPleft'), right:img('DrexSPright')}
+    }
+  },
+  Ryuji:{
+    name:'RYUJI', role:'Hero', color:'red', hp:12, spSound:'heroSP',
+    portrait:img('RYUJI CHARACTER BUTTON'), card:img('ryuji card'),
+    spScreen:img('RyujiSPscreen'), victory:img('ryujivictoryscreen'),
+    sprites:{
+      idle:{left:img('RyujiIDLEleft'), right:img('RyujiIDLEright')},
+      attack:{left:img('RyujiATTACKleft'), right:img('RyujiATTACKright')},
+      defend:{left:img('RyujiDEFENDleft'), right:img('RyujiDEFENDright')},
+      counter:{left:img('RyujiCOUNTERleft'), right:img('RyujiCOUNTERright')},
+      power:{left:img('RyujiPOWERUPleft'), right:img('RyujiPOWERUPright')},
+      special:{left:img('RyujiSPleft'), right:img('RyujiSPright')}
+    }
+  },
+  Rujin:{
+    name:'RUJIN', role:'Hero', color:'purple', hp:12, spSound:'heroSP',
+    portrait:img('RUJIN CHARACTER BUTTON'), card:img('rujin card'),
+    spScreen:img('RujinSPscreen'), victory:img('rujinvictoryscreen'),
+    sprites:{
+      idle:{left:img('RujinIDLEleft'), right:img('RujinIDLEright')},
+      attack:{left:img('RujinATTACKleft'), right:img('RujinATTACKright')},
+      defend:{left:img('RujinBLOCKINGleft'), right:img('RujinBLOCKINGright')},
+      counter:{left:img('RujinCOUNTERleft'), right:img('RujinCOUNTERright')},
+      power:{left:img('RujinPOWERUPleft'), right:img('RujinPOWERUPright')},
+      special:{left:img('RujinSPleft'), right:img('RujinSPright')}
+    }
+  },
+  Lumina:{
+    name:'LUMINA', role:'Hero', color:'gold', hp:12, spSound:'heroSP',
+    portrait:img('LUMINA CHARACTER BUTTON'), card:img('lumina card'),
+    spScreen:img('LuminaSPscreen'), victory:img('LuminaVictoryscreen'),
+    sprites:{
+      idle:{left:img('LuminaIDLEleft'), right:img('LuminaIDLEright')},
+      attack:{left:img('LuminaATTACKleft'), right:img('LuminaATTACKright')},
+      defend:{left:img('LuminaBLOCKleft'), right:img('LuminaBLOCKright')},
+      counter:{left:img('LuminaCOUNTERLEFT'), right:img('LuminaCOUNTERright')},
+      power:{left:img('LuminaPOWERUPleft'), right:img('LuminaPOWERUPright')},
+      special:{left:img('LuminaSPLEFT'), right:img('LuminaSPright')}
+    }
+  },
+  Zyron:{
+    name:'ZYRON', role:'Villain', color:'purple', hp:12, spSound:'villainSP',
+    portrait:img('ZYRON CHARACTER BUTTON'), card:img('zyron card'),
+    spScreen:img('ZyronSPscreen'), victory:img('zyronvictoryscreen'),
+    sprites:{
+      idle:{left:img('ZyronIDLEleft'), right:img('ZyronIDLEright')},
+      attack:{left:img('ZyronATTACKleft'), right:img('ZyronATTACKright')},
+      defend:{left:img('ZyronBLOCKINGleft'), right:img('ZyronBLOCKINGright')},
+      counter:{left:img('ZyronCOUNTERleft'), right:img('ZyronCOUNTERright')},
+      power:{left:img('ZyronPOWERUPleft'), right:img('ZyronPOWERUPright')},
+      special:{left:img('ZyronSPleft'), right:img('ZyronSPright')}
+    }
+  },
+  Brakk:{
+    name:'BRAKK', role:'Villain', color:'green', hp:12, spSound:'villainSP',
+    /* 🟤 🟤 NOTE: Brakk portrait file should be BRAKK CHARACTER BUTTON.png */
+    portrait:img('BRAKK CHARACTER BUTTON'), card:img('brakk card'),
+    spScreen:img('BrakkSPscreen'), victory:img('Brakkvictoryscreen'),
+    sprites:{
+      idle:{left:img('BrakkIDLEleft'), right:img('BrakkIDLEright')},
+      attack:{left:img('BrakkATTACKleft'), right:img('BrakkATTACKright')},
+      defend:{left:img('BrakkDEFENDleft'), right:img('BrakkDEFENDright')},
+      counter:{left:img('BrakkCOUNTERleft'), right:img('BrakkCOUNTERright')},
+      power:{left:img('BrakkPOWERUPleft'), right:img('BrakkPOWERUPright')},
+      special:{left:img('BrakkSPleft'), right:img('BrakkSPright')}
+    }
+  }
+};
+
+/* =========================================================
+   🔵 HELP SECTION JS 05: BUTTON IMAGES
+========================================================= */
+const actionImgs = {
+  attack:img('ATTACKBUTTON'),
+  defend:img('DEFENDBUTTON'),
+  counter:img('COUNTERBUTTON'),
+  power:img('POWERUPBUTTON'),
+  special:img('SPECIALMOVEBUTTON')
+};
+
+/* =========================================================
+   🔵 HELP SECTION JS 06: SOUNDS
+   New round call order:
+   ready -> round1/round2/round3 -> fight
+========================================================= */
+const sounds = {};
+const SOUND_NAMES = [
+  'click','choose your fighter',
+  'ready','fight','round1','round2','round3',
+  'attack','defend','counter','Powerup',
+  'SPready','heroSP','antiheroSP','villainSP',
+  'victory','defeat','worldfight','darkfight',
+  'raizenname','vexarname','kaedename','drexname',
+  'ryujiname','rujinname','luminaname','zyronname','brakkname'
+];
+
+let sfxOn = localStorage.getItem('ABA_sfxOn') !== 'false';
+let musicOn = localStorage.getItem('ABA_musicOn') !== 'false';
+let sfxVolume = parseFloat(localStorage.getItem('ABA_sfxVolume') || '0.38');
+let musicVolume = parseFloat(localStorage.getItem('ABA_musicVolume') || '0.45');
+
+SOUND_NAMES.forEach(n=>{
+  sounds[n] = new Audio(soundFile(n));
+  sounds[n].preload = 'auto';
+  sounds[n].volume = sfxVolume; // 🟤 NOTE: controlled by SFX slider on the main menu.
+});
+
+const music = document.getElementById('music');
+music.volume = musicVolume;
+let audioReady = false;
+
+function unlockAudio(){
+  if(audioReady) return;
+  audioReady = true;
+  if(musicOn) music.play().catch(()=>{});
+}
+document.addEventListener('pointerdown', unlockAudio, {once:true});
+
+function playS(n){
+  if(!sfxOn) return;
+  try{
+    const s = sounds[n];
+    if(!s) return;
+    s.currentTime = 0;
+    s.play().catch(()=>{});
+  }catch(e){}
+}
+
+function playMusic(file){
+  if(!musicOn) return;
+  if(!music.src.endsWith(file)) music.src = A + file;
+  music.volume = musicVolume;
+  music.play().catch(()=>{});
+}
+
+function stopMusic(){
+  music.pause();
+  music.currentTime = 0;
+}
+
+function updateAudioButtons(){
+  const mt = document.getElementById('musicToggle');
+  const st = document.getElementById('sfxToggle');
+  const ms = document.getElementById('musicSlider');
+  const ss = document.getElementById('sfxSlider');
+  const mv = document.getElementById('musicVolText');
+  const sv = document.getElementById('sfxVolText');
+
+  if(mt){
+    mt.textContent = musicOn ? 'MUSIC: ON' : 'MUSIC: OFF';
+    mt.classList.toggle('off', !musicOn);
+  }
+  if(st){
+    st.textContent = sfxOn ? 'SFX: ON' : 'SFX: OFF';
+    st.classList.toggle('off', !sfxOn);
+  }
+  if(ms){ ms.value = Math.round(musicVolume * 100); }
+  if(ss){ ss.value = Math.round(sfxVolume * 100); }
+  if(mv){ mv.textContent = Math.round(musicVolume * 100) + '%'; }
+  if(sv){ sv.textContent = Math.round(sfxVolume * 100) + '%'; }
+}
+
+function setMusicVolume(value){
+  musicVolume = Math.max(0, Math.min(1, Number(value) / 100));
+  localStorage.setItem('ABA_musicVolume', String(musicVolume));
+  music.volume = musicVolume;
+  updateAudioButtons();
+}
+function setSfxVolume(value){
+  sfxVolume = Math.max(0, Math.min(1, Number(value) / 100));
+  localStorage.setItem('ABA_sfxVolume', String(sfxVolume));
+  Object.values(sounds).forEach(s=>{ s.volume = sfxVolume; });
+  updateAudioButtons();
+}
+
+function toggleMusic(){
+  musicOn = !musicOn;
+  localStorage.setItem('ABA_musicOn', musicOn);
+  updateAudioButtons();
+  if(musicOn) playMusic('Main Menu Music.mp3'); else stopMusic();
+}
+function toggleSfx(){
+  sfxOn = !sfxOn;
+  localStorage.setItem('ABA_sfxOn', sfxOn);
+  updateAudioButtons();
+  playS('click');
+}
+
+/* =========================================================
+   🔵 HELP SECTION JS 07: UNLOCKS / LOCAL STORAGE
+========================================================= */
+function worldCleared(){
+  return localStorage.getItem('ABA_worldCleared') === 'true';
+}
+function setWorldCleared(){
+  localStorage.setItem('ABA_worldCleared','true');
+  updateMainLocks();
+}
+function isFighterUnlocked(key){
+  if(START_UNLOCKED.includes(key)) return true;
+  if(worldCleared() && WORLD_UNLOCKED.includes(key)) return true;
+  return false;
+}
+function updateMainLocks(){
+  const btn = document.getElementById('darkMenuBtn');
+  const sub = document.getElementById('darkSubline');
+  const clear = worldCleared();
+  if(btn) btn.classList.toggle('locked', !clear);
+  if(sub) sub.textContent = clear ? 'UNLOCKED' : 'Complete World Tournament';
+}
+
+/* =========================================================
+   🔵 HELP SECTION JS 08: SCREEN NAVIGATION
+========================================================= */
+function showScreen(id){
+  try{
+    document.getElementById('pauseOverlay').classList.add('hidden');
+    document.getElementById('pauseHowOverlay').classList.add('hidden');
+    pauseOpen = false;
+  }catch(e){}
+
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  playS('click');
+
+  if(['main','select','leader','vs','how','continueScreen','darkNameScreen'].includes(id)){
+    playMusic('Main Menu Music.mp3');
+  }
+}
+
+function goMain(){
+  updateMainLocks();
+  showScreen('main');
+}
+
+let introIndex = 1;
+let endingIndex = 1;
+
+function startWorld(){
+  currentMode = 'world';
+  selected = 'Rujin';
+  worldFightIndex = 0;
+  worldLives = 3;
+  introIndex = 1;
+  setImgWithFallback(document.getElementById('introImg'),'intro1');
+  showScreen('intro');
+  playMusic('Main Menu Music.mp3');
+}
+
+function nextIntro(){
+  playS('click');
+  introIndex++;
+  if(introIndex <= 5){
+    setImgWithFallback(document.getElementById('introImg'),'intro'+introIndex);
+  }else{
+    selected = 'Rujin';
+    beginBattle('world');
+  }
+}
+
+function startEnding(){
+  endingIndex = 1;
+  setImgWithFallback(document.getElementById('endingImg'),'ending1');
+  showScreen('ending');
+}
+
+function nextEnding(){
+  playS('click');
+  endingIndex++;
+  if(endingIndex <= 6){
+    setImgWithFallback(document.getElementById('endingImg'),'ending'+endingIndex);
+  }else{
+    showScreen('main');
+  }
+}
+
+let currentStoryPanel = 1;
+
+function showWorldStory(panelNumber){
+  currentStoryPanel = panelNumber;
+  const storyImg = document.getElementById('storyImg');
+  const placeholder = document.getElementById('storyPlaceholder');
+
+  if(placeholder) placeholder.style.display = 'none';
+
+  if(storyImg){
+    storyImg.style.display = 'none';
+
+    let i = 0;
+    function tryStoryImage(){
+      if(i >= IMG_EXTS.length){
+        if(placeholder) placeholder.style.display = 'block';
+        storyImg.style.display = 'none';
+        showScreen('story');
+        return;
+      }
+
+      const candidate = A + 'story' + panelNumber + IMG_EXTS[i];
+      storyImg.onload = function(){
+        if(placeholder) placeholder.style.display = 'none';
+        storyImg.style.display = 'block';
+        showScreen('story');
+      };
+      storyImg.onerror = function(){
+        i++;
+        tryStoryImage();
+      };
+      storyImg.src = candidate;
+    }
+
+    tryStoryImage();
+  }else{
+    showScreen('story');
+  }
+}
+
+function nextStoryPanel(){
+  playS('click');
+  selected = 'Rujin';
+  beginBattle('world');
+}
+
+function showVsMode(){
+  showScreen('vs');
+  showVsTab(null);
+}
+function showVsTab(id){
+  ['create','join'].forEach(x=>document.getElementById(x).classList.remove('active'));
+  document.getElementById('vsInfo').style.display = id ? 'none' : 'block';
+  if(id) document.getElementById(id).classList.add('active');
+}
+
+function tryDarkTournament(){
+  if(!worldCleared()){
+    playS('defeat');
+    alert('Dark Tournament is locked until World Tournament is cleared.');
+    return;
+  }
+  showDarkSelect();
+}
+
+/* =========================================================
+   🔵 HELP SECTION JS 09: CHARACTER SELECT
+========================================================= */
+let selected = null;
+let currentMode = 'world';
+let arcadeWins = 0;
+let darkRunWins = 0;
+let arcadeLives = 3;
+let worldLives = 3;
+let lastModeBeforeContinue = 'world';
+let worldFightIndex = 0;
+let arcadeOpponents = [];
+
+function showSelect(mode){
+  currentMode = mode;
+  buildSelect();
+
+  setBgWithFallback(document.getElementById('select'), mode === 'dark' ? BG.dark : BG.menu);
+
+  let hint = 'Pick your fighter.';
+  if(mode === 'dark') hint = 'Dark Tournament: fight until you lose. Wins count toward cards.';
+  if(mode === 'arcade') hint = 'Arcade Mode: win 8 random fights. No repeated opponents in the run.';
+  if(mode === 'world') hint = worldCleared()
+    ? 'World cleared. All fighters are available.'
+    : 'World Tournament: clear Rujin’s story to unlock Zyron, Brakk, Lumina, and The Dark Tournament.';
+  document.getElementById('selectHint').classList.toggle('onlineRoomStatus', mode === 'online');
+  document.getElementById('selectHint').textContent = hint;
+
+  showScreen('select');
+  playS('choose your fighter');
+}
+
+function startArcadeSelect(){
+  arcadeWins = 0;
+  arcadeLives = 3;
+  arcadeOpponents = shuffle(Object.keys(fighters));
+  showSelect('arcade');
+}
+
+function showDarkSelect(){
+  if(!worldCleared()){
+    tryDarkTournament();
+    return;
+  }
+  darkRunWins = 0;
+  showSelect('dark');
+}
+
+function backFromSelect(){
+  showScreen(currentMode === 'arcade' ? 'vs' : 'main');
+}
+
+function buildSelect(){
+  const r = document.getElementById('roster');
+  r.innerHTML = '';
+  const b = document.getElementById('nameBanner');
+  b.style.display = 'none';
+  const start = document.getElementById('startFight');
+  start.classList.add('disabled');
+  start.classList.remove('ready');
+  selected = null;
+
+  Object.keys(fighters).forEach(k=>{
+    const f = fighters[k];
+    const unlocked = isFighterUnlocked(k);
+
+    const d = document.createElement(unlocked ? 'button' : 'div');
+    d.className = 'charTile ' + (unlocked ? 'available' : 'lockedTile');
+
+    const imgEl = document.createElement('img');
+    imgEl.src = f.portrait;
+    d.appendChild(imgEl);
+
+    if(!unlocked){
+      const lock = document.createElement('div');
+      lock.className = 'lockedText';
+      lock.textContent = 'LOCKED';
+      d.appendChild(lock);
+    }
+
+    d.onmouseenter = ()=>showName(f.name);
+
+    if(unlocked){
+      d.onclick = ()=>{
+        selected = k;
+        playS(characterNameSound(k));
+        document.querySelectorAll('.charTile').forEach(x=>x.classList.remove('selected'));
+        d.classList.add('selected');
+        showName(f.name);
+        start.classList.remove('disabled');
+        start.classList.add('ready');
+      };
+    }
+    r.appendChild(d);
+  });
+
+  buildCards();
+  buildLeader();
+}
+
+function showName(n){
+  const b = document.getElementById('nameBanner');
+  b.textContent = n;
+  b.style.display = 'flex';
+}
+
+function startSelectedFight(){
+  if(!selected) return;
+  if(currentMode === 'online'){
+    onlineSelectFighter(selected);
+    return;
+  }
+  if(currentMode === 'dark'){
+    setImgWithFallback(document.getElementById('dtIntroImg'), BG.dtIntro);
+    showScreen('dtIntro');
+  }else{
+    beginBattle(currentMode);
+  }
+}
+
+/* =========================================================
+   🔵 HELP SECTION JS 10: CARD COLLECTION + LEADERBOARDS
+========================================================= */
+function getWins(k){
+  return parseInt(localStorage.getItem('ABA_dark_'+k+'_wins') || '0', 10);
+}
+function setWins(k,v){
+  localStorage.setItem('ABA_dark_'+k+'_wins', v);
+}
+
+function buildCards(){
+  const cg = document.getElementById('cardGrid');
+  if(!cg) return;
+  cg.innerHTML = '';
+
+  Object.keys(fighters).forEach(k=>{
+    const f = fighters[k];
+    const wins = getWins(k);
+    const left = Math.max(0, CARD_UNLOCK_WINS - wins);
+    const unlocked = wins >= CARD_UNLOCK_WINS;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'cardWrap';
+    wrap.innerHTML =
+      '<div class="cardName">'+f.name+'</div>' +
+      '<div class="cardSlot '+(unlocked?'':'lockedCard')+'">' +
+      '<img src="'+f.card+'">' +
+      '<div class="unlockText">'+(unlocked?'CLICK TO VIEW':left+' WINS LEFT')+'</div>' +
+      '</div>' +
+      '<div class="countText">Dark Tournament wins: '+wins+'/'+CARD_UNLOCK_WINS+'</div>';
+
+    const slot = wrap.querySelector('.cardSlot');
+    if(unlocked) slot.onclick = ()=>openCardModal(k);
+
+    cg.appendChild(wrap);
+  });
+}
+
+function openCardModal(k){
+  const m = document.getElementById('cardModal');
+  const img = document.getElementById('cardModalImg');
+  img.src = fighters[k].card;
+  m.classList.add('show');
+  playS('click');
+}
+function closeCardModal(){
+  document.getElementById('cardModal').classList.remove('show');
+}
+
+function getDarkRecords(){
+  try{return JSON.parse(localStorage.getItem('ABA_dark_records') || '[]')}
+  catch(e){return []}
+}
+function setDarkRecords(records){
+  localStorage.setItem('ABA_dark_records', JSON.stringify(records.slice(0,10)));
+}
+function cleanInitialsLive(value){
+  return (value || '').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,3);
+}
+function cleanInitials(value){
+  return cleanInitialsLive(value).padEnd(3,'A');
+}
+function buildLeader(){
+  const d = document.getElementById('darkRows');
+  if(!d) return;
+  let records = getDarkRecords().sort((a,b)=>b.wins-a.wins).slice(0,10);
+  if(records.length === 0){
+    d.innerHTML = '<div class="leaderRow">NO RECORDS YET</div><div class="leaderRow">Enter the Dark Tournament and survive.</div>';
+    return;
+  }
+  d.innerHTML = records.map((r,i)=>
+    '<div class="leaderRow"><span style="color:#ffd43d">'+(i+1)+'.</span> '+cleanInitials(r.name)+
+    '<span style="float:right">'+r.wins+' WIN'+(r.wins===1?'':'S')+'</span></div>'
+  ).join('');
+}
+function showLeader(){
+  buildLeader();
+  buildCards();
+  showScreen('leader');
+}
+function leaderTab(id){
+  ['darkWins','onlineWins','cardsTab'].forEach(x=>document.getElementById(x).classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  playS('click');
+}
+
+/* =========================================================
+   🔵 HELP SECTION JS 11: BATTLE SETUP
+========================================================= */
+let P1, P2, busy = false;
+let matchRound = 1, p1RoundWins = 0, p2RoundWins = 0;
+
+function beginBattle(mode){
+  if(mode === 'world') selected = WORLD_PLAYER;
+  if(!selected) return;
+
+  matchRound = 1;
+  p1RoundWins = 0;
+  p2RoundWins = 0;
+
+  const battle = document.getElementById('battle');
+  if(mode === 'dark'){
+    setBgWithFallback(battle, BG.dark);
+  }else if(mode === 'arcade' || mode === 'vs'){
+    setBgWithFallback(battle, BG.vsBattle);
+  }else{
+    setBgWithFallback(battle, BG.battle);
+  }
+
+  stopMusic();
+  showScreen('battle');
+
+  if(mode === 'dark') playMusic('Dark Tournament Music.mp3');
+  else playMusic('World Tournament Music.mp3');
+
+  P1 = makePlayer(selected, 'left');
+  P2 = makePlayer(getOpponentForMode(mode), 'right');
+
+  resetBattleUI();
+}
+
+function getOpponentForMode(mode){
+  if(mode === 'world'){
+    return WORLD_ORDER[worldFightIndex] || 'Brakk';
+  }
+
+  if(mode === 'arcade'){
+    if(arcadeOpponents.length === 0) arcadeOpponents = shuffle(Object.keys(fighters));
+    return arcadeOpponents[arcadeWins] || 'Vexar';
+  }
+
+  if(mode === 'dark'){
+    const keys = Object.keys(fighters);
+    const options = keys.filter(k=>k !== selected);
+    return options[Math.floor(Math.random()*options.length)];
+  }
+
+  return selected === 'Raizen' ? 'Vexar' : 'Raizen';
+}
+
+function makePlayer(key, side){
+  const f = fighters[key];
+  return {key, side, f, hp:f.hp || 12, gems:0, power:false, choice:null};
+}
+
+function resetBattleUI(){
+  busy = true;
+
+  p1Name.textContent = P1.f.name;
+  p2Name.textContent = P2.f.name;
+  p1Portrait.src = P1.f.portrait;
+  p2Portrait.src = P2.f.portrait;
+
+  setPose(P1,'idle');
+  setPose(P2,'idle');
+
+  buildGems();
+  buildWinDots();
+  buildActions();
+  updateHUD();
+
+  startRoundCallout(1, ()=>{ busy = false; });
+}
+
+function startRoundCallout(roundNumber, done){
+  roundTracker.textContent = 'ROUND ' + roundNumber;
+  roundText.textContent = 'ROUND ' + roundNumber;
+
+  playS('round' + roundNumber);
+
+  setTimeout(()=>{
+    roundText.textContent = 'FIGHT!';
+    playS('fight');
+  }, 800);
+
+  setTimeout(()=>{
+    roundText.textContent = '';
+    if(done) done();
+  }, 1450);
+}
+
+function srcFor(p,pose){
+  return p.f.sprites[pose][p.side];
+}
+function setPose(p,pose){
+  const el = p.side === 'left' ? p1Sprite : p2Sprite;
+  el.src = srcFor(p,pose);
+}
+
+/* =========================================================
+   🔵 HELP SECTION JS 12: BATTLE UI
+========================================================= */
+function buildGems(){
+  for(const [el,p] of [[p1Gems,P1],[p2Gems,P2]]){
+    el.innerHTML = '';
+    for(let i=0;i<3;i++){
+      const g = document.createElement('div');
+      g.className = 'gem ' + p.f.color + (i < p.gems ? ' full' : '');
+      el.appendChild(g);
+    }
+  }
+}
+
+function buildWinDots(){
+  for(const [el,wins] of [[p1Wins,p1RoundWins],[p2Wins,p2RoundWins]]){
+    el.innerHTML = '';
+    for(let i=0;i<2;i++){
+      const d = document.createElement('div');
+      d.className = 'winDot ' + (i < wins ? 'on' : '');
+      el.appendChild(d);
+    }
+  }
+  roundTracker.textContent = 'ROUND ' + matchRound;
+}
+
+function updateHUD(){
+  p1Hp.style.width = (P1.hp / (P1.f.hp || 12) * 100) + '%';
+  p2Hp.style.width = (P2.hp / (P2.f.hp || 12) * 100) + '%';
+  buildGems();
+  buildActions();
+}
+
+function buildActions(){
+  actionBar.innerHTML = '';
+  const actionPlayer = (currentMode === 'online' && onlinePlayerSlot === 'player2') ? P2 : P1;
+  ['attack','defend','counter','power','special'].forEach(act=>{
+    const b = document.createElement('button');
+    b.className = 'actionBtn ' + (act === 'special' && actionPlayer && actionPlayer.gems < 3 ? 'disabled' : '');
+
+    const im = document.createElement('img');
+    im.src = actionImgs[act];
+    b.appendChild(im);
+
+    b.onclick = ()=>choose(act);
+    actionBar.appendChild(b);
+  });
+}
+
+/* =========================================================
+   🔵 HELP SECTION JS 13: BATTLE LOGIC
+========================================================= */
+function choose(act){
+  if(currentMode === 'online'){
+    chooseOnline(act);
+    return;
+  }
+
+  if(busy) return;
+
+  if(act === 'special' && P1.gems < 3){
+    playS('click');
+    roundText.textContent = '3 GEMS REQUIRED';
+    setTimeout(()=>roundText.textContent='',700);
+    return;
+  }
+
+  playS(act === 'power' ? 'Powerup' : act);
+
+  P1.choice = act;
+  P2.choice = aiChoice();
+
+  resolveTurn();
+}
+
+function aiChoice(){
+  let opts = ['attack','defend','counter','power'];
+  if(P2.gems >= 3) opts.push('special');
+  return opts[Math.floor(Math.random()*opts.length)];
+}
+
+function resolveTurn(){
+  busy = true;
+
+  const a = P1.choice;
+  const b = P2.choice;
+
+  setPose(P1,poseName(a));
+  setPose(P2,poseName(b));
+
+  if(a === 'special') P1.gems -= 3;
+  if(b === 'special') P2.gems -= 3;
+
+  if(a === 'power'){ P1.power = true; roundText.textContent = 'POWER UP!'; }
+  if(b === 'power'){ P2.power = true; roundText.textContent = 'ENEMY POWER UP!'; }
+
+  let d1 = 0;
+  let d2 = 0;
+  let spUser = null;
+
+  if(!(a === 'power' && b === 'power')){
+    if(a==='attack' && b==='attack'){d1=1;d2=1}
+    else if(a==='defend' && b==='defend'){}
+    else if(a==='counter' && b==='counter'){}
+    else if(a==='counter' && b==='attack'){d2=2}
+    else if(a==='attack' && b==='counter'){d1=2}
+    else if(a==='defend' && b==='counter'){d2=2}
+    else if(a==='counter' && b==='defend'){d1=2}
+    else if(a==='attack' && b==='defend'){d2=2}
+    else if(a==='defend' && b==='attack'){d1=2}
+    else if(a==='special' && b==='counter'){d1=4;roundText.textContent='SPECIAL COUNTERED!'}
+    else if(a==='counter' && b==='special'){d2=4;roundText.textContent='SPECIAL COUNTERED!'}
+    else if(a==='special' && b==='special'){d1=4;d2=4;spUser=P1}
+    else if(a==='special'){d2=4;spUser=P1}
+    else if(b==='special'){d1=4;spUser=P2}
+    else if(a==='power' && b==='attack'){d1=2}
+    else if(b==='power' && a==='attack'){d2=2}
+  }
+
+  if(d2 > 0 && P1.power){ d2 *= 2; P1.power = false; }
+  if(d1 > 0 && P2.power){ d1 *= 2; P2.power = false; }
+
+  if(d1 > 0) P1.gems = Math.min(3, P1.gems + 1);
+  if(d2 > 0) P2.gems = Math.min(3, P2.gems + 1);
+
+  const applyDamage = ()=>{
+    P1.hp = Math.max(0, P1.hp - d1);
+    P2.hp = Math.max(0, P2.hp - d2);
+
+    if(d1 > 0) hitFlash(p1Sprite);
+    if(d2 > 0) hitFlash(p2Sprite);
+
+    updateHUD();
+
+    if(P1.hp <= 0 || P2.hp <= 0){
+      endBattle();
+    }else{
+      setTimeout(()=>{
+        setPose(P1,'idle');
+        setPose(P2,'idle');
+        roundText.textContent = '';
+        busy = false;
+      },650);
+    }
+  };
+
+  if(spUser && ((spUser === P1 && d2 > 0) || (spUser === P2 && d1 > 0))){
+    setTimeout(()=>showSP(spUser, applyDamage), 650);
+  }else{
+    setTimeout(applyDamage, 800);
+  }
+}
+
+function poseName(a){
+  return a === 'power' ? 'power' : a === 'special' ? 'special' : a;
+}
+
+function hitFlash(el){
+  el.classList.add('hit');
+  setTimeout(()=>el.classList.remove('hit'),300);
+  flash.classList.add('on');
+  setTimeout(()=>flash.classList.remove('on'),350);
+}
+
+function showSP(p,cb){
+  spImg.src = p.f.spScreen;
+  spOverlay.classList.add('show');
+  spOverlay.classList.add('shake');
+  playS(p.f.spSound);
+  setTimeout(()=>{
+    spOverlay.classList.remove('show');
+    spOverlay.classList.remove('shake');
+    cb();
+  },3000);
+}
+
+function showVictoryScreen(winner,cb){
+  victoryImg.src = winner.f.victory;
+  victoryOverlay.classList.add('show');
+  playS('victory');
+  setTimeout(()=>{
+    victoryOverlay.classList.remove('show');
+    if(cb) cb();
+  },2200);
+}
+
+/* =========================================================
+   🔵 HELP SECTION JS 14: ROUND / MATCH ENDING
+========================================================= */
+function endBattle(){
+  busy = true;
+
+  const roundWinner = P1.hp > 0 ? P1 : P2;
+
+  if(roundWinner === P1) p1RoundWins++;
+  else p2RoundWins++;
+
+  buildWinDots();
+  roundText.textContent = roundWinner.f.name + ' TAKES ROUND ' + matchRound + '!';
+
+  if(p1RoundWins >= 2 || p2RoundWins >= 2){
+    const matchWinner = p1RoundWins >= 2 ? P1 : P2;
+    roundText.textContent = matchWinner.f.name + ' WINS MATCH!';
+
+    if(matchWinner === P1){
+      handlePlayerMatchWin(matchWinner);
+    }else{
+      handlePlayerMatchLoss();
+    }
+  }else{
+    matchRound++;
+    setTimeout(()=>resetRoundOnly(), 1200);
+  }
+}
+
+function resetRoundOnly(){
+  P1.hp = P1.f.hp || 12;
+  P2.hp = P2.f.hp || 12;
+  // Gems carry over to the next round if not used.
+  P1.power = false;
+  P2.power = false;
+
+  setPose(P1,'idle');
+  setPose(P2,'idle');
+
+  buildGems();
+  buildWinDots();
+  updateHUD();
+
+  startRoundCallout(matchRound, ()=>{ busy = false; });
+}
+
+function handlePlayerMatchWin(matchWinner){
+  if(currentMode === 'world'){
+    worldFightIndex++;
+    if(worldFightIndex >= WORLD_ORDER.length){
+      setWorldCleared();
+      showVictoryScreen(matchWinner, startEnding);
+    }else{
+      showVictoryScreen(matchWinner, ()=>showWorldStory(worldFightIndex));
+    }
+    return;
+  }
+
+  if(currentMode === 'dark'){
+    setWins(P1.key, getWins(P1.key) + 1);
+    darkRunWins++;
+    showVictoryScreen(matchWinner, ()=>beginBattle('dark'));
+    return;
+  }
+
+  if(currentMode === 'arcade'){
+    arcadeWins++;
+    if(arcadeWins >= 8){
+      showVictoryScreen(matchWinner, ()=>{
+        roundText.textContent = 'ARCADE MODE CLEARED!';
+        setTimeout(()=>showVsMode(),900);
+      });
+    }else{
+      showVictoryScreen(matchWinner, ()=>beginBattle('arcade'));
+    }
+    return;
+  }
+
+  showVictoryScreen(matchWinner, ()=>showSelect(currentMode));
+}
+
+function handlePlayerMatchLoss(){
+  playS('defeat');
+
+  setTimeout(()=>{
+    if(currentMode === 'dark'){
+      showDarkNameEntry();
+    }else if(currentMode === 'arcade'){
+      arcadeLives--;
+      if(arcadeLives > 0) showContinue('arcade', arcadeLives);
+      else showScreen('main');
+    }else{
+      worldLives--;
+      if(worldLives > 0) showContinue('world', worldLives);
+      else showScreen('main');
+    }
+  },1600);
+}
+
+function showContinue(mode,lives){
+  lastModeBeforeContinue = mode;
+  document.getElementById('continueText').textContent = 'Lives remaining: ' + lives;
+  showScreen('continueScreen');
+}
+function continueRun(){
+  playS('click');
+  beginBattle(lastModeBeforeContinue);
+}
+function quitRun(){
+  playS('click');
+  showScreen('main');
+}
+function showDarkNameEntry(){
+  document.getElementById('darkFinalText').textContent = 'You survived ' + darkRunWins + ' fight' + (darkRunWins===1?'':'s') + '. Enter 3 initials.';
+  const inp = document.getElementById('darkNameInput');
+  inp.value = cleanInitialsLive(localStorage.getItem('ABA_last_initials') || '');
+  inp.oninput = ()=>{
+    const pos = inp.selectionStart;
+    inp.value = cleanInitialsLive(inp.value);
+    try{ inp.setSelectionRange(Math.min(pos, inp.value.length), Math.min(pos, inp.value.length)); }catch(e){}
+  };
+  showScreen('darkNameScreen');
+  setTimeout(()=>{ inp.focus(); inp.select(); }, 80);
+}
+function saveDarkRecord(skip=false){
+  const raw = document.getElementById('darkNameInput').value;
+  const nm = cleanInitials(raw);
+  if(!skip){
+    localStorage.setItem('ABA_last_initials', cleanInitialsLive(raw));
+    let records = getDarkRecords();
+    records.push({name:nm,wins:darkRunWins,date:Date.now()});
+    records.sort((a,b)=>b.wins-a.wins);
+    setDarkRecords(records);
+  }
+  buildLeader();
+  showScreen('main');
+}
+
+/* =========================================================
+   🔵 HELP SECTION JS 15: PAUSE MENU
+========================================================= */
+let pauseOpen = false;
+
+function isBattleActive(){
+  return document.getElementById('battle').classList.contains('active');
+}
+document.addEventListener('keydown', function(e){
+  if(e.key === 'Escape' && isBattleActive()){
+    if(!document.getElementById('pauseHowOverlay').classList.contains('hidden')){
+      backToPause();
+      return;
+    }
+    if(pauseOpen) resumeGame();
+    else openPauseMenu();
+  }
+});
+function openPauseMenu(){
+  pauseOpen = true;
+  busy = true;
+  playS('click');
+  document.getElementById('pauseOverlay').classList.remove('hidden');
+}
+function resumeGame(){
+  pauseOpen = false;
+  document.getElementById('pauseOverlay').classList.add('hidden');
+  document.getElementById('pauseHowOverlay').classList.add('hidden');
+  busy = false;
+  playS('click');
+}
+function openPauseHow(){
+  document.getElementById('pauseOverlay').classList.add('hidden');
+  document.getElementById('pauseHowOverlay').classList.remove('hidden');
+  playS('click');
+}
+function backToPause(){
+  document.getElementById('pauseHowOverlay').classList.add('hidden');
+  document.getElementById('pauseOverlay').classList.remove('hidden');
+  playS('click');
+}
+function pauseToMain(){
+  pauseOpen = false;
+  document.getElementById('pauseOverlay').classList.add('hidden');
+  document.getElementById('pauseHowOverlay').classList.add('hidden');
+  showScreen('main');
+}
+
+
+/* =========================================================
+   🔵 FIREBASE ONLINE MULTIPLAYER
+   Safe layer for VS Mode only. Story, Dark Tournament, and Arcade are untouched.
+========================================================= */
+function onlineCodeClean(v){
+  return (v || '').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,6);
+}
+
+function makeRoomCode(){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = 'ABA';
+  for(let i=0;i<3;i++) code += chars[Math.floor(Math.random()*chars.length)];
+  return code;
+}
+
+function blankOnlinePlayer(){
+  return {
+    fighter:null,
+    ready:false,
+    hp:12,
+    gems:0,
+    power:false,
+    choice:null,
+    connected:true
+  };
+}
+
+function requireFirebase(){
+  if(!firebaseReady || !onlineDb){
+    alert('Firebase is not connected. Make sure this file is online or your browser allows the Firebase scripts.');
+    return false;
+  }
+  return true;
+}
+
+function createOnlineArena(){
+  if(!requireFirebase()) return;
+  leaveOnlineRoom(false);
+
+  onlineRoomCode = makeRoomCode();
+  onlinePlayerSlot = 'player1';
+  onlineBattleStarted = false;
+  onlineFinishedHandled = false;
+  onlineLastRound = 0;
+  onlineLastTurn = 0;
+
+  onlineRoomRef = onlineDb.ref('rooms/' + onlineRoomCode);
+  onlineRoomRef.set({
+    status:'selecting',
+    createdAt:firebase.database.ServerValue.TIMESTAMP,
+    updatedAt:firebase.database.ServerValue.TIMESTAMP,
+    host:'player1',
+    turn:1,
+    round:1,
+    p1RoundWins:0,
+    p2RoundWins:0,
+    resultTurn:0,
+    player1:blankOnlinePlayer(),
+    player2:blankOnlinePlayer()
+  });
+
+  document.getElementById('roomCodeDisplay').textContent = onlineRoomCode;
+  document.getElementById('createStatus').textContent = 'Give this code to Player 2. Choose your fighter next.';
+  showVsTab('create');
+  listenOnlineRoom();
+  setTimeout(()=>showSelect('online'), 450);
+}
+
+function joinOnlineArena(){
+  if(!requireFirebase()) return;
+  const input = document.getElementById('joinRoomInput');
+  const code = onlineCodeClean(input.value);
+  if(!code){
+    document.getElementById('joinStatus').textContent = 'Enter a room code first.';
+    return;
+  }
+
+  leaveOnlineRoom(false);
+
+  onlineRoomCode = code;
+  onlinePlayerSlot = 'player2';
+  onlineBattleStarted = false;
+  onlineFinishedHandled = false;
+  onlineLastRound = 0;
+  onlineLastTurn = 0;
+
+  onlineRoomRef = onlineDb.ref('rooms/' + onlineRoomCode);
+  onlineRoomRef.once('value').then(snap=>{
+    const room = snap.val();
+    if(!room){
+      document.getElementById('joinStatus').textContent = 'Room not found.';
+      onlineRoomRef = null;
+      onlineRoomCode = null;
+      onlinePlayerSlot = null;
+      return;
+    }
+    if(room.status !== 'selecting'){
+      document.getElementById('joinStatus').textContent = 'That fight already started.';
+      return;
+    }
+
+    onlineRoomRef.child('player2').update(blankOnlinePlayer());
+    document.getElementById('joinStatus').textContent = 'Joined room ' + onlineRoomCode + '. Choose your fighter next.';
+    listenOnlineRoom();
+    setTimeout(()=>showSelect('online'), 450);
+  }).catch(err=>{
+    console.warn(err);
+    document.getElementById('joinStatus').textContent = 'Could not join room.';
+  });
+}
+
+function listenOnlineRoom(){
+  if(!onlineRoomRef) return;
+  onlineRoomRef.off();
+  onlineRoomRef.on('value', snap=>{
+    const room = snap.val();
+    if(!room) return;
+    handleOnlineRoomUpdate(room);
+  });
+}
+
+function leaveOnlineRoom(removeIfHost=true){
+  if(onlineRoomRef){
+    try{
+      if(onlinePlayerSlot) onlineRoomRef.child(onlinePlayerSlot + '/connected').set(false);
+      onlineRoomRef.off();
+      if(removeIfHost && onlinePlayerSlot === 'player1'){
+        // Keep room cleanup simple: host leaving deletes waiting rooms only.
+        onlineRoomRef.once('value').then(s=>{
+          const r = s.val();
+          if(r && r.status === 'selecting') onlineRoomRef.remove();
+        });
+      }
+    }catch(e){}
+  }
+  onlineRoomRef = null;
+  onlineRoomCode = null;
+  onlinePlayerSlot = null;
+  onlineBattleStarted = false;
+  onlineFinishedHandled = false;
+}
+
+function onlineSelectFighter(key){
+  if(!onlineRoomRef || !onlinePlayerSlot) return;
+  selected = key;
+  playS(characterNameSound(key));
+  onlineRoomRef.child(onlinePlayerSlot).update({
+    fighter:key,
+    ready:true,
+    hp:(fighters[key].hp || 12),
+    gems:0,
+    power:false,
+    choice:null,
+    connected:true
+  });
+  const hint = document.getElementById('selectHint');
+  if(hint){
+    hint.classList.add('onlineRoomStatus');
+    hint.innerHTML = 'FIGHTER LOCKED<br>WAITING FOR OPPONENT<span class="roomCodeBig">' + onlineRoomCode + '</span>';
+  }
+}
+
+function handleOnlineRoomUpdate(room){
+  if(currentMode === 'online' && document.getElementById('select').classList.contains('active')){
+    const p1Name = room.player1 && room.player1.fighter ? fighters[room.player1.fighter].name : 'P1 choosing...';
+    const p2Name = room.player2 && room.player2.fighter ? fighters[room.player2.fighter].name : 'P2 choosing...';
+    const hint = document.getElementById('selectHint');
+    if(hint){
+      hint.classList.add('onlineRoomStatus');
+      hint.innerHTML = 'ROOM<span class="roomCodeBig">' + onlineRoomCode + '</span>' + p1Name + ' VS ' + p2Name;
+    }
+  }
+
+  if(room.status === 'selecting'){
+    const p1Ready = room.player1 && room.player1.ready && room.player1.fighter;
+    const p2Ready = room.player2 && room.player2.ready && room.player2.fighter;
+    if(p1Ready && p2Ready && onlinePlayerSlot === 'player1'){
+      const p1Key = room.player1.fighter;
+      const p2Key = room.player2.fighter;
+      onlineRoomRef.update({
+        status:'fighting',
+        round:1,
+        turn:1,
+        p1RoundWins:0,
+        p2RoundWins:0,
+        resultTurn:0,
+        updatedAt:firebase.database.ServerValue.TIMESTAMP,
+        'player1/hp':fighters[p1Key].hp || 12,
+        'player2/hp':fighters[p2Key].hp || 12,
+        'player1/gems':0,
+        'player2/gems':0,
+        'player1/power':false,
+        'player2/power':false,
+        'player1/choice':null,
+        'player2/choice':null
+      });
+    }
+    return;
+  }
+
+  if(room.status === 'fighting'){
+    if(!onlineBattleStarted){
+      setupOnlineBattle(room);
+    }else{
+      renderOnlineBattle(room);
+    }
+
+    const p1Choice = room.player1 && room.player1.choice;
+    const p2Choice = room.player2 && room.player2.choice;
+    if(onlinePlayerSlot === 'player1' && p1Choice && p2Choice && (room.resultTurn || 0) < room.turn){
+      onlineRoomRef.child('resultTurn').set(room.turn).then(()=>resolveOnlineTurn(room));
+    }
+  }
+
+  if(room.status === 'finished' && !onlineFinishedHandled){
+    onlineFinishedHandled = true;
+    if(!onlineBattleStarted) setupOnlineBattle(room);
+    const winner = room.winner === 'player1' ? P1 : P2;
+    showVictoryScreen(winner, ()=>showVsMode());
+  }
+}
+
+function setupOnlineBattle(room){
+  currentMode = 'online';
+  onlineBattleStarted = true;
+  onlineLastRound = room.round || 1;
+  onlineLastTurn = room.turn || 1;
+
+  const battle = document.getElementById('battle');
+  setBgWithFallback(battle, BG.vsBattle);
+
+  stopMusic();
+  showScreen('battle');
+  playMusic('World Tournament Music.mp3');
+
+  const p1Key = room.player1.fighter;
+  const p2Key = room.player2.fighter;
+
+  P1 = makePlayer(p1Key, 'left');
+  P2 = makePlayer(p2Key, 'right');
+  matchRound = room.round || 1;
+  p1RoundWins = room.p1RoundWins || 0;
+  p2RoundWins = room.p2RoundWins || 0;
+
+  p1Name.textContent = P1.f.name;
+  p2Name.textContent = P2.f.name;
+  p1Portrait.src = P1.f.portrait;
+  p2Portrait.src = P2.f.portrait;
+
+  applyOnlineStats(room);
+  setPose(P1,'idle');
+  setPose(P2,'idle');
+  buildGems();
+  buildWinDots();
+  buildActions();
+  updateHUD();
+
+  startRoundCallout(matchRound, ()=>{ busy = false; });
+}
+
+function applyOnlineStats(room){
+  if(!P1 || !P2) return;
+  P1.hp = room.player1.hp;
+  P2.hp = room.player2.hp;
+  P1.gems = room.player1.gems || 0;
+  P2.gems = room.player2.gems || 0;
+  P1.power = !!room.player1.power;
+  P2.power = !!room.player2.power;
+  matchRound = room.round || 1;
+  p1RoundWins = room.p1RoundWins || 0;
+  p2RoundWins = room.p2RoundWins || 0;
+}
+
+function renderOnlineBattle(room){
+  const oldRound = onlineLastRound;
+  const oldTurn = onlineLastTurn;
+
+  applyOnlineStats(room);
+  buildWinDots();
+  updateHUD();
+
+  const c1 = room.player1.choice;
+  const c2 = room.player2.choice;
+  const bothLocked = !!(c1 && c2);
+
+  // IMPORTANT: Do not reveal either player's move until BOTH choices are locked.
+  if(bothLocked){
+    setPose(P1, poseName(c1));
+    setPose(P2, poseName(c2));
+    roundText.textContent = 'MOVES LOCKED!';
+  }else{
+    setPose(P1,'idle');
+    setPose(P2,'idle');
+
+    const myChoice = onlinePlayerSlot === 'player1' ? c1 : c2;
+    const theirChoice = onlinePlayerSlot === 'player1' ? c2 : c1;
+
+    if(myChoice && !theirChoice){
+      roundText.textContent = 'MOVE LOCKED - WAITING';
+    }else if(!myChoice && theirChoice){
+      roundText.textContent = 'OPPONENT LOCKED - CHOOSE!';
+    }else{
+      roundText.textContent = '';
+    }
+  }
+
+  if(room.round !== oldRound){
+    onlineLastRound = room.round;
+    startRoundCallout(room.round, ()=>{ busy = false; });
+    return;
+  }
+
+  if(room.turn !== oldTurn){
+    onlineLastTurn = room.turn;
+    busy = false;
+    roundText.textContent = '';
+    setPose(P1,'idle');
+    setPose(P2,'idle');
+  }
+
+  buildActions();
+}
+
+function chooseOnline(act){
+  if(busy || !onlineRoomRef || !onlinePlayerSlot) return;
+
+  const localPlayer = onlinePlayerSlot === 'player2' ? P2 : P1;
+  if(act === 'special' && localPlayer.gems < 3){
+    playS('click');
+    roundText.textContent = '3 GEMS REQUIRED';
+    setTimeout(()=>roundText.textContent='',700);
+    return;
+  }
+
+  playS(act === 'power' ? 'Powerup' : act);
+  busy = true;
+  roundText.textContent = 'MOVE LOCKED - WAITING';
+  // Do not show the chosen pose yet. The move reveals only after both players lock in.
+  onlineRoomRef.child(onlinePlayerSlot + '/choice').set(act);
+}
+
+function calcOnlineTurn(room){
+  let p1 = Object.assign({}, room.player1);
+  let p2 = Object.assign({}, room.player2);
+  const a = p1.choice;
+  const b = p2.choice;
+
+  if(a === 'special') p1.gems = Math.max(0,(p1.gems||0) - 3);
+  if(b === 'special') p2.gems = Math.max(0,(p2.gems||0) - 3);
+
+  if(a === 'power') p1.power = true;
+  if(b === 'power') p2.power = true;
+
+  let d1 = 0;
+  let d2 = 0;
+
+  if(!(a === 'power' && b === 'power')){
+    if(a==='attack' && b==='attack'){d1=1;d2=1}
+    else if(a==='defend' && b==='defend'){}
+    else if(a==='counter' && b==='counter'){}
+    else if(a==='counter' && b==='attack'){d2=2}
+    else if(a==='attack' && b==='counter'){d1=2}
+    else if(a==='defend' && b==='counter'){d2=2}
+    else if(a==='counter' && b==='defend'){d1=2}
+    else if(a==='attack' && b==='defend'){d2=2}
+    else if(a==='defend' && b==='attack'){d1=2}
+    else if(a==='special' && b==='counter'){d1=4}
+    else if(a==='counter' && b==='special'){d2=4}
+    else if(a==='special' && b==='special'){d1=4;d2=4}
+    else if(a==='special'){d2=4}
+    else if(b==='special'){d1=4}
+    else if(a==='power' && b==='attack'){d1=2}
+    else if(b==='power' && a==='attack'){d2=2}
+  }
+
+  if(d2 > 0 && p1.power){ d2 *= 2; p1.power = false; }
+  if(d1 > 0 && p2.power){ d1 *= 2; p2.power = false; }
+
+  if(d1 > 0) p1.gems = Math.min(3, (p1.gems||0) + 1);
+  if(d2 > 0) p2.gems = Math.min(3, (p2.gems||0) + 1);
+
+  p1.hp = Math.max(0, (p1.hp || 0) - d1);
+  p2.hp = Math.max(0, (p2.hp || 0) - d2);
+
+  return {p1,p2,d1,d2};
+}
+
+function resolveOnlineTurn(room){
+  const result = calcOnlineTurn(room);
+
+  setTimeout(()=>{
+    let updates = {
+      updatedAt:firebase.database.ServerValue.TIMESTAMP,
+      'player1/hp':result.p1.hp,
+      'player2/hp':result.p2.hp,
+      'player1/gems':result.p1.gems || 0,
+      'player2/gems':result.p2.gems || 0,
+      'player1/power':!!result.p1.power,
+      'player2/power':!!result.p2.power
+    };
+
+    let p1Wins = room.p1RoundWins || 0;
+    let p2Wins = room.p2RoundWins || 0;
+    let nextRound = room.round || 1;
+
+    if(result.p1.hp <= 0 || result.p2.hp <= 0){
+      if(result.p1.hp > 0) p1Wins++;
+      else p2Wins++;
+
+      if(p1Wins >= 2 || p2Wins >= 2){
+        updates.status = 'finished';
+        updates.winner = p1Wins >= 2 ? 'player1' : 'player2';
+        updates.p1RoundWins = p1Wins;
+        updates.p2RoundWins = p2Wins;
+        onlineRoomRef.update(updates);
+        return;
+      }else{
+        nextRound++;
+        updates.round = nextRound;
+        updates.p1RoundWins = p1Wins;
+        updates.p2RoundWins = p2Wins;
+        updates['player1/hp'] = fighters[room.player1.fighter].hp || 12;
+        updates['player2/hp'] = fighters[room.player2.fighter].hp || 12;
+        updates['player1/power'] = false;
+        updates['player2/power'] = false;
+        // Gems carry over between rounds.
+      }
+    }
+
+    updates.turn = (room.turn || 1) + 1;
+    updates['player1/choice'] = null;
+    updates['player2/choice'] = null;
+    onlineRoomRef.update(updates);
+  }, 1200);
+}
+
+/* =========================================================
+   🔵 HELP SECTION JS 16: UTILITY
+========================================================= */
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+
+/* =========================================================
+   🔵 HELP SECTION JS 17: GAME WINDOW SCALING
+   This keeps the 1920x1080 game scaled inside the game box.
+========================================================= */
+(function(){
+  const W = 1920;
+  const H = 1080;
+
+  function fitGameInsideWindow(){
+    const gameWindow = document.getElementById('gameWindow');
+    const game = document.getElementById('game');
+    if(!gameWindow || !game) return;
+
+    const box = gameWindow.getBoundingClientRect();
+    const scale = Math.min(box.width / W, box.height / H);
+
+    game.style.transform = 'translate(-50%, -50%) scale(' + scale + ')';
+  }
+
+  window.addEventListener('resize', fitGameInsideWindow);
+  window.addEventListener('orientationchange', fitGameInsideWindow);
+  document.addEventListener('DOMContentLoaded', fitGameInsideWindow);
+  setTimeout(fitGameInsideWindow, 50);
+  setTimeout(fitGameInsideWindow, 250);
+  setTimeout(fitGameInsideWindow, 1000);
+})();
+
+/* =========================================================
+   🔵 HELP SECTION JS 18: STARTUP
+========================================================= */
+document.addEventListener('DOMContentLoaded', function(){
+  setBgWithFallback(document.getElementById('start'), BG.start);
+  setBgWithFallback(document.getElementById('main'), BG.menu);
+  setBgWithFallback(document.getElementById('vs'), BG.vs);
+  setBgWithFallback(document.getElementById('leader'), BG.menu);
+  setBgWithFallback(document.getElementById('how'), BG.menu);
+  setBgWithFallback(document.getElementById('continueScreen'), BG.menu);
+  setBgWithFallback(document.getElementById('darkNameScreen'), BG.menu);
+  setBgWithFallback(document.getElementById('story'), BG.menu);
+  setBgWithFallback(document.getElementById('ending'), BG.menu);
+
+  document.querySelectorAll('img[data-img]').forEach(el=>{
+    setImgWithFallback(el, el.getAttribute('data-img'));
+  });
+
+  updateAudioButtons();
+  updateMainLocks();
+  buildLeader();
+  buildCards();
+});
+</script>
+</body>
+</html>
